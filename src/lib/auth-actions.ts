@@ -55,7 +55,7 @@ export async function loginAction(prevState: any, formData: FormData) {
     }
 
     const expectedPassword = user.password || 'palamana';
-    if (password !== expectedPassword && process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+    if (password !== expectedPassword) {
       return { success: false, error: 'Password salah.' };
     }
 
