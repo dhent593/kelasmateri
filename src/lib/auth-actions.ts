@@ -44,44 +44,6 @@ export async function loginAction(prevState: any, formData: FormData) {
 
   const cleanEmail = email.trim().toLowerCase();
 
-  // 1. Check default test bypass
-  if (cleanEmail === 'admin@kelasmateri.com' && password === 'palamana') {
-    const adminUser = await db.getUserByEmail(cleanEmail);
-    const userId = adminUser?.id || 'admin-uuid';
-    
-    // Ensure admin user exists in DB
-    if (!adminUser) {
-      await db.createUser(cleanEmail, 'admin', userId);
-    }
-    
-    const session: UserSession = {
-      id: userId,
-      email: cleanEmail,
-      role: 'admin'
-    };
-    await setSessionCookie(session);
-    return { success: true, role: 'admin', message: 'Login berhasil (Bypass Admin)' };
-  }
-
-  // Check default user bypass
-  if (cleanEmail === 'user@kelasmateri.com' && password === 'palamana') {
-    const standardUser = await db.getUserByEmail(cleanEmail);
-    const userId = standardUser?.id || 'user-uuid';
-    
-    // Ensure standard user exists in DB
-    if (!standardUser) {
-      await db.createUser(cleanEmail, 'user', userId);
-    }
-    
-    const session: UserSession = {
-      id: userId,
-      email: cleanEmail,
-      role: 'user'
-    };
-    await setSessionCookie(session);
-    return { success: true, role: 'user', message: 'Login berhasil (Bypass User)' };
-  }
-
   // 2. Real Auth Fallback or general Mock Auth
   try {
     // If Supabase is configured, verify password against Supabase

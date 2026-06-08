@@ -42,14 +42,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleFillBypass = (role: 'admin' | 'user') => {
-    if (role === 'admin') {
-      setEmail('admin@kelasmateri.com');
-    } else {
-      setEmail('user@kelasmateri.com');
-    }
-    setPassword('palamana');
-  };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-[#070b13] relative overflow-hidden">
@@ -138,34 +130,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Autofill testing links */}
-          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800/80">
-            <div className="flex items-center gap-2 mb-3 text-slate-500 dark:text-slate-400 text-xs">
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Akses Uji Coba Cepat (Bypass):</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleFillBypass('admin')}
-                className="p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-left text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-brand-600 dark:text-brand-400">Admin Account</div>
-                <div className="truncate opacity-75">admin@kelasmateri.com</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFillBypass('user')}
-                className="p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-left text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <div className="font-semibold text-accent-500">User Account</div>
-                <div className="truncate opacity-75">user@kelasmateri.com</div>
-              </button>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-2 text-center">
-              Password default untuk bypass: <span className="font-semibold">palamana</span>
-            </div>
-          </div>
+
         </div>
 
         {/* Register link */}
