@@ -1,28 +1,35 @@
 -- Supabase Schema for kelasmateri (CPNS Exam Simulation)
 
--- Enable UUID generation
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Create Enums
-CREATE TYPE user_role AS ENUM ('admin', 'user');
-CREATE TYPE exam_type_enum AS ENUM ('ai', 'manual');
-CREATE TYPE exam_status_enum AS ENUM ('in_progress', 'completed');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('admin', 'user');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'exam_type_enum') THEN
+        CREATE TYPE exam_type_enum AS ENUM ('ai', 'manual');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'exam_status_enum') THEN
+        CREATE TYPE exam_status_enum AS ENUM ('in_progress', 'completed');
+    END IF;
+END $$;
 
 -- 1. Create Users Table
-CREATE TABLE public.users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS public.users (
+    id TEXT PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
     role user_role NOT NULL DEFAULT 'user',
     can_generate_exam BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable RLS for users table
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+-- Disable Row Level Security (RLS) to ensure smooth integration with Server Actions
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 
 -- 2. Create Manual Questions Table
-CREATE TABLE public.manual_questions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE IF NOT EXISTS public.manual_questions (
+    id TEXT PRIMARY KEY,
     category TEXT NOT NULL, -- 'TIU', 'TWK', 'TKP'
     question_text TEXT NOT NULL,
     options JSONB NOT NULL, -- Array of strings e.g. ["A. Option 1", "B. Option 2", ...]
@@ -30,13 +37,13 @@ CREATE TABLE public.manual_questions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable RLS for manual_questions
-ALTER TABLE public.manual_questions ENABLE ROW LEVEL SECURITY;
+-- Disable Row Level Security (RLS) to ensure smooth integration with Server Actions
+ALTER TABLE public.manual_questions DISABLE ROW LEVEL SECURITY;
 
 -- 3. Create Exam Sessions Table
-CREATE TABLE public.exam_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS public.exam_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     exam_type exam_type_enum NOT NULL,
     current_question_index INT NOT NULL DEFAULT 0,
     saved_answers JSONB NOT NULL DEFAULT '{}'::jsonb, -- Map of { question_id_or_index: "A"/"B"/"C"/"D"/"E" }
@@ -48,97 +55,52 @@ CREATE TABLE public.exam_sessions (
     completed_at TIMESTAMP WITH TIME ZONE
 );
 
--- Enable RLS for exam_sessions
-ALTER TABLE public.exam_sessions ENABLE ROW LEVEL SECURITY;
+-- Disable Row Level Security (RLS) to ensure smooth integration with Server Actions
+ALTER TABLE public.exam_sessions DISABLE ROW LEVEL SECURITY;
 
 -- Create Indexes
 CREATE INDEX IF NOT EXISTS exam_sessions_user_id_idx ON public.exam_sessions(user_id);
 CREATE INDEX IF NOT EXISTS manual_questions_category_idx ON public.manual_questions(category);
 
 --------------------------------------------------------------------------------
--- ROW LEVEL SECURITY (RLS) POLICIES
+-- SEED DATA
 --------------------------------------------------------------------------------
 
--- Users Table Policies
-CREATE POLICY "Allow users to read their own profile"
-    ON public.users FOR SELECT
-    USING (auth.uid() = id);
+-- Seed default users
+INSERT INTO public.users (id, email, password, role, can_generate_exam)
+VALUES 
+('admin-uuid', 'admin@kelasmateri.com', 'palamana', 'admin', true),
+('user-uuid', 'user@kelasmateri.com', 'palamana', 'user', false)
+ON CONFLICT (email) DO NOTHING;
 
-CREATE POLICY "Allow users to update their own profile details"
-    ON public.users FOR UPDATE
-    USING (auth.uid() = id);
-
-CREATE POLICY "Admins have full access to users table"
-    ON public.users FOR ALL
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE users.id = auth.uid() AND users.role = 'admin'
-        )
-    );
-
--- Manual Questions Policies
-CREATE POLICY "Allow anyone authenticated to view questions"
-    ON public.manual_questions FOR SELECT
-    TO authenticated
-    USING (true);
-
-CREATE POLICY "Admins have full control over questions"
-    ON public.manual_questions FOR ALL
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE users.id = auth.uid() AND users.role = 'admin'
-        )
-    );
-
--- Exam Sessions Policies
-CREATE POLICY "Allow users to view their own sessions"
-    ON public.exam_sessions FOR SELECT
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Allow users to create their own sessions"
-    ON public.exam_sessions FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Allow users to update their own sessions"
-    ON public.exam_sessions FOR UPDATE
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can view all exam sessions"
-    ON public.exam_sessions FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.users
-            WHERE users.id = auth.uid() AND users.role = 'admin'
-        )
-    );
-
---------------------------------------------------------------------------------
--- TRIGGER FOR AUTOMATIC USER PROFILE CREATION
---------------------------------------------------------------------------------
--- This automatically creates a public profile row when a new user registers via Supabase Auth.
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.users (id, email, role, can_generate_exam)
-  VALUES (
-    new.id,
-    new.email,
-    -- Make the first user an admin for easy testing, or default based on email
-    CASE 
-        WHEN new.email = 'admin@kelasmateri.com' THEN 'admin'::user_role
-        ELSE 'user'::user_role
-    END,
-    CASE 
-        WHEN new.email = 'admin@kelasmateri.com' THEN true
-        ELSE false
-    END
-  );
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE OR REPLACE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- Seed default questions
+INSERT INTO public.manual_questions (id, category, question_text, options, correct_answer)
+VALUES
+('q1', 'TWK', 'Menurut UUD 1945 yang telah diamandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan yang berada di bawahnya serta oleh sebuah...', 
+ '["A. Komisi Yudisial", "B. Mahkamah Konstitusi", "C. Dewan Perwakilan Rakyat", "D. Badan Pemeriksa Keuangan", "E. Majelis Permusyawaratan Rakyat"]'::jsonb, 
+ 'B'),
+('q2', 'TWK', 'Sikap rela berkorban demi kepentingan bangsa dan negara di atas kepentingan pribadi atau golongan merupakan perwujudan dari sila Pancasila yang ke...', 
+ '["A. Satu", "B. Dua", "C. Tiga", "D. Empat", "E. Lima"]'::jsonb, 
+ 'C'),
+('q3', 'TWK', 'Sidang pertama BPUPKI yang diselenggarakan pada tanggal 29 Mei - 1 Juni 1945 berfokus membahas tentang...', 
+ '["A. Rancangan Undang-Undang Dasar", "B. Bentuk Pemerintahan Negara", "C. Batas Wilayah Negara Indonesia", "D. Rumusan Dasar Negara Indonesia", "E. Pengangkatan Presiden dan Wakil Presiden"]'::jsonb, 
+ 'D'),
+('q4', 'TIU', 'Carilah kelanjutan dari deret angka berikut: 3, 6, 12, 21, 33, ...', 
+ '["A. 45", "B. 48", "C. 46", "D. 52", "E. 50"]'::jsonb, 
+ 'B'),
+('q5', 'TIU', 'APRESIASI : KARYA SENI = ...', 
+ '["A. Hukuman : Kejahatan", "B. Penghargaan : Prestasi", "C. Penilaian : Ujian", "D. Investasi : Modal", "E. Konsumsi : Makanan"]'::jsonb, 
+ 'B'),
+('q6', 'TIU', 'Semua mahasiswa yang rajin belajar pasti lulus ujian. Sebagian mahasiswa Teknik Sipil tidak lulus ujian. Kesimpulan yang paling tepat adalah...', 
+ '["A. Semua mahasiswa Teknik Sipil rajin belajar.", "B. Semua mahasiswa Teknik Sipil tidak rajin belajar.", "C. Sebagian mahasiswa Teknik Sipil rajin belajar.", "D. Sebagian mahasiswa Teknik Sipil tidak rajin belajar.", "E. Semua yang tidak lulus ujian bukan mahasiswa Teknik Sipil."]'::jsonb, 
+ 'D'),
+('q7', 'TKP', 'Ketika Anda sedang sibuk menyelesaikan tugas kantor yang sangat penting, tiba-tiba seorang rekan kerja datang meminta bantuan untuk memecahkan masalah sistem komputernya yang mendesak. Sikap Anda adalah...', 
+ '["A. Menolaknya secara kasar karena tugas Anda jauh lebih penting dan harus segera selesai.", "B. Menghentikan tugas Anda sepenuhnya dan membantunya hingga selesai tanpa peduli pekerjaan Anda terbengkalai.", "C. Memberitahunya secara sopan bahwa Anda sedang sibuk, lalu menyarankannya untuk meminta bantuan ke bagian IT atau berjanji membantunya setelah tugas Anda selesai.", "D. Mengabaikan permintaannya dan pura-pura tidak mendengar agar dia pergi dengan sendirinya.", "E. Menyuruhnya untuk mengerjakan sendiri karena itu adalah tanggung jawabnya masing-masing."]'::jsonb, 
+ '{"A":1,"B":3,"C":5,"D":2,"E":4}'),
+('q8', 'TKP', 'Ketika Anda ditunjuk sebagai ketua tim dalam sebuah proyek krusial, salah satu anggota tim Anda menunjukkan penurunan performa kerja yang signifikan dan sering terlambat mengumpulkan tugasnya. Tindakan pertama yang akan Anda lakukan adalah...', 
+ '["A. Melaporkan performanya yang buruk kepada atasan agar dia segera diganti.", "B. Memarahinya di depan anggota tim lain agar dia termotivasi untuk bekerja lebih cepat.", "C. Memanggilnya secara pribadi untuk berdiskusi, mendengarkan kendalanya, and mencari solusi bersama demi kelancaran proyek.", "D. Membiarkannya saja dan mengambil alih seluruh pekerjaannya secara sepihak.", "E. Mengabaikan kontribusinya dan tidak melibatkan dirinya lagi dalam rapat-rapat koordinasi."]'::jsonb, 
+ '{"A":2,"B":1,"C":5,"D":4,"E":3}'),
+('q9', 'TKP', 'Anda sedang melayani antrean masyarakat di loket pelayanan publik. Tiba-tiba seorang warga berteriak marah karena merasa terlalu lama menunggu dan menuduh Anda tidak bekerja dengan profesional. Sikap Anda menghadapi situasi ini adalah...', 
+ '["A. Ikut berteriak membalas tuduhannya agar warga lain tahu bahwa Anda sudah bekerja keras.", "B. Tetap bersikap tenang, mendengarkan keluhannya dengan empati, meminta maaf atas ketidaknyamanan, dan menjelaskan situasi pelayanan dengan ramah serta menyelesaikannya secepat mungkin.", "C. Meninggalkan loket dan memanggil satpam untuk mengusir warga tersebut keluar dari gedung.", "D. Diam saja dan cemberut selama melayani warga tersebut untuk menunjukkan bahwa Anda tersinggung.", "E. Menutup loket pelayanan sementara waktu sampai suasana menjadi kondusif kembali."]'::jsonb, 
+ '{"A":1,"B":5,"C":3,"D":2,"E":4}')
+ON CONFLICT (id) DO NOTHING;
