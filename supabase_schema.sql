@@ -1,5 +1,10 @@
 -- Supabase Schema for kelasmateri (CPNS Exam Simulation)
 
+-- Drop existing tables to ensure a clean slate and prevent column/type mismatch errors
+DROP TABLE IF EXISTS public.exam_sessions CASCADE;
+DROP TABLE IF EXISTS public.manual_questions CASCADE;
+DROP TABLE IF EXISTS public.users CASCADE;
+
 -- Create Enums
 DO $$ 
 BEGIN
