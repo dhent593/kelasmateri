@@ -15,9 +15,11 @@ import {
   Search, 
   Sparkles,
   Save,
-  X
+  X,
+  Clock,
+  History
 } from 'lucide-react';
-import { db, UserProfile, Question, UserSession, Package } from '@/lib/db';
+import { db, UserProfile, Question, UserSession, Package, ExamSession } from '@/lib/db';
 import { getServerSession, logoutAction } from '@/lib/auth-actions';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -35,15 +37,19 @@ export default function AdminDashboard() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+  
+  // Sessions & Exam History Modal State
+  const [sessionsList, setSessionsList] = useState<ExamSession[]>([]);
+  const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
 
   // Questions State
   const [questionsList, setQuestionsList] = useState<Question[]>([]);
-  const [questionFilter, setQuestionFilter] = useState<'All' | 'TIU' | 'TWK' | 'TKP'>('All');
+  const [questionFilter, setQuestionFilter] = useState<'All' | 'TIU' | 'TWK' | 'TKP' | 'Listening' | 'Structure' | 'Reading'>('All');
   
   // Question Form State (Add / Edit)
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [formCategory, setFormCategory] = useState<'TIU' | 'TWK' | 'TKP'>('TWK');
+  const [formCategory, setFormCategory] = useState<'TIU' | 'TWK' | 'TKP' | 'Listening' | 'Structure' | 'Reading'>('TWK');
   const [formQuestionText, setFormQuestionText] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
@@ -92,6 +98,9 @@ export default function AdminDashboard() {
 
       const packages = await db.getPackages();
       setPackagesList(packages);
+
+      const sessions = await db.getExamSessions();
+      setSessionsList(sessions);
     } catch (e: any) {
       setError('Gagal memuat data administrasi.');
     } finally {
@@ -201,6 +210,39 @@ export default function AdminDashboard() {
       setUsersList(users);
     } catch (err: any) {
       setError('Gagal menghapus pengguna.');
+    }
+  };
+
+  const handleUpdateUserPackage = async (userId: string, newPackageId: string) => {
+    setError(null);
+    setSuccess(null);
+    try {
+      await db.updateUser(userId, { package_id: newPackageId });
+      setSuccess('Paket pengguna berhasil diperbarui.');
+      // Refresh list
+      const users = await db.getUsers();
+      setUsersList(users);
+    } catch (err: any) {
+      setError('Gagal memperbarui paket pengguna.');
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus riwayat ujian ini?')) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      const ok = await db.deleteExamSession(sessionId);
+      if (ok) {
+        setSuccess('Riwayat ujian berhasil dihapus.');
+        // Refresh sessions list
+        const sessions = await db.getExamSessions();
+        setSessionsList(sessions);
+      } else {
+        setError('Gagal menghapus riwayat ujian.');
+      }
+    } catch (err) {
+      setError('Gagal menghapus riwayat ujian.');
     }
   };
 
@@ -615,50 +657,74 @@ export default function AdminDashboard() {
                     <tr className="bg-slate-50/50 dark:bg-slate-950/20 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-100 dark:border-slate-800/80">
                       <th className="p-4">Alamat Email</th>
                       <th className="p-4">Role</th>
-                      <th className="p-4 text-center">Izin Ujian AI</th>
+                      <th className="p-4">Paket Aktif</th>
+                      <th className="p-4 text-center">Jumlah Ujian</th>
                       <th className="p-4 text-right">Tindakan</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
-                    {usersList.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-950/20 transition-colors">
-                        <td className="p-4 font-semibold text-slate-900 dark:text-white">{user.email}</td>
-                        <td className="p-4">
-                          <button
-                            onClick={() => handleToggleRole(user.id, user.role)}
-                            className={`px-2.5 py-1 rounded-md font-bold text-[10px] tracking-wider uppercase cursor-pointer transition-colors ${
-                              user.role === 'admin'
-                                ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                            }`}
-                          >
-                            {user.role}
-                          </button>
-                        </td>
-                        <td className="p-4 text-center">
-                          <button
-                            onClick={() => handleToggleCanGenerateExam(user.id, user.can_generate_exam)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[10px] tracking-wider uppercase transition-all cursor-pointer ${
-                              user.can_generate_exam
-                                ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200'
-                            }`}
-                          >
-                            <Sparkles className="w-3 h-3" />
-                            <span>{user.can_generate_exam ? 'Aktif' : 'Terkunci'}</span>
-                          </button>
-                        </td>
-                        <td className="p-4 text-right">
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer inline-flex"
-                            title="Hapus Pengguna"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {usersList.map((user) => {
+                      const userCompletedSessions = sessionsList.filter(
+                        s => s.user_id === user.id && s.status === 'completed'
+                      );
+                      const examsCount = userCompletedSessions.length;
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-950/20 transition-colors">
+                          <td className="p-4 font-semibold text-slate-900 dark:text-white">{user.email}</td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => handleToggleRole(user.id, user.role)}
+                              className={`px-2.5 py-1 rounded-md font-bold text-[10px] tracking-wider uppercase cursor-pointer transition-colors ${
+                                user.role === 'admin'
+                                  ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                              }`}
+                            >
+                              {user.role}
+                            </button>
+                          </td>
+                          <td className="p-4">
+                            <select
+                              value={user.package_id || 'pkg-basic'}
+                              onChange={(e) => handleUpdateUserPackage(user.id, e.target.value)}
+                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs font-semibold focus:outline-none focus:border-brand-500 cursor-pointer"
+                            >
+                              {!packagesList.some(p => p.id === 'pkg-basic') && <option value="pkg-basic">Gratis (Basic)</option>}
+                              {!packagesList.some(p => p.id === 'pkg-premium') && <option value="pkg-premium">Premium CPNS</option>}
+                              {!packagesList.some(p => p.id === 'pkg-platinum') && <option value="pkg-platinum">Platinum (TOEFL + AI)</option>}
+                              {packagesList.map((pkg) => (
+                                <option key={pkg.id} value={pkg.id}>
+                                  {pkg.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-4 text-center font-bold text-slate-900 dark:text-white font-mono">
+                            {examsCount} Ujian
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex justify-end items-center gap-2">
+                              <button
+                                onClick={() => setHistoryUser(user)}
+                                className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/20 text-brand-600 dark:text-brand-400 font-bold text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                                title="Riwayat Ujian"
+                              >
+                                <History className="w-3 h-3" />
+                                <span>Riwayat</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer inline-flex"
+                                title="Hapus Pengguna"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1114,6 +1180,128 @@ export default function AdminDashboard() {
                 className="flex-1 py-3.5 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors shadow-md shadow-red-500/15 cursor-pointer"
               >
                 Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Exam History Modal */}
+      {historyUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm animate-scale-up">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl flex flex-col max-h-[85vh] space-y-6 animate-fade-in">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <History className="w-5 h-5 text-brand-500" />
+                  <span>Riwayat Ujian Pengguna</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-semibold">{historyUser.email}</p>
+              </div>
+              <button
+                onClick={() => setHistoryUser(null)}
+                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-950 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body: Scrollable Session List */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+              {(() => {
+                const userSessions = sessionsList
+                  .filter(s => s.user_id === historyUser.id && s.status === 'completed')
+                  .sort((a, b) => new Date(b.completed_at || b.created_at).getTime() - new Date(a.completed_at || a.created_at).getTime());
+
+                if (userSessions.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center gap-2">
+                      <Clock className="w-8 h-8 text-slate-300" />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Belum Ada Ujian Selesai</span>
+                      <span className="text-[10px] text-slate-400 font-semibold">Pengguna ini belum pernah menyelesaikan simulasi tryout.</span>
+                    </div>
+                  );
+                }
+
+                return userSessions.map((s) => {
+                  const completedDate = new Date(s.completed_at || s.created_at).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  return (
+                    <div 
+                      key={s.id} 
+                      className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:border-slate-200 dark:hover:border-slate-700/50"
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                          <span className={`px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${
+                            s.subject === 'toefl'
+                              ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/30'
+                              : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
+                          }`}>
+                            {s.subject === 'toefl' ? 'TOEFL PBT' : 'CPNS CAT'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500`}>
+                            {s.exam_type}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold dark:text-slate-500">{completedDate}</span>
+                        </div>
+
+                        {/* Category score breakdown */}
+                        <div className="flex gap-3 text-[10px] font-bold text-slate-400 uppercase pt-1">
+                          {s.subject === 'toefl' ? (
+                            <>
+                              <span>L: <span className="text-slate-700 dark:text-slate-300">{s.category_scores?.Listening || 0}/10</span></span>
+                              <span>S: <span className="text-slate-700 dark:text-slate-300">{s.category_scores?.Structure || 0}/10</span></span>
+                              <span>R: <span className="text-slate-700 dark:text-slate-300">{s.category_scores?.Reading || 0}/10</span></span>
+                            </>
+                          ) : (
+                            <>
+                              <span>TIU: <span className="text-slate-700 dark:text-slate-300">{s.category_scores?.TIU || 0}</span></span>
+                              <span>TWK: <span className="text-slate-700 dark:text-slate-300">{s.category_scores?.TWK || 0}</span></span>
+                              <span>TKP: <span className="text-slate-700 dark:text-slate-300">{s.category_scores?.TKP || 0}</span></span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side score & actions */}
+                      <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-0 border-slate-100 dark:border-slate-850 pt-2 sm:pt-0">
+                        <div className="text-right">
+                          <div className="text-sm font-black text-slate-900 dark:text-white font-mono">
+                            {s.final_score} Poin
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Skor Akhir</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteSession(s.id)}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-800"
+                          title="Hapus Sesi Riwayat"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-4 border-t border-slate-100 dark:border-slate-800/80 pt-4 justify-end">
+              <button
+                onClick={() => setHistoryUser(null)}
+                className="px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs shadow-md cursor-pointer transition-all"
+              >
+                Tutup
               </button>
             </div>
           </div>

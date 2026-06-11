@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     password TEXT NOT NULL,
     role user_role NOT NULL DEFAULT 'user',
     can_generate_exam BOOLEAN NOT NULL DEFAULT false,
+    package_id TEXT DEFAULT 'pkg-basic',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS public.exam_sessions (
     status exam_status_enum NOT NULL DEFAULT 'in_progress',
     final_score INT,
     category_scores JSONB, -- { "TIU": score, "TWK": score, "TKP": score }
+    subject TEXT DEFAULT 'cpns',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE
 );

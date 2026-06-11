@@ -1,0 +1,222 @@
+{
+  "users": [
+    {
+      "id": "admin-uuid",
+      "email": "admin@kelasmateri.com",
+      "role": "admin",
+      "can_generate_exam": true,
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "password": "palamana",
+      "package_id": "pkg-platinum"
+    },
+    {
+      "id": "user-uuid",
+      "email": "user@kelasmateri.com",
+      "role": "user",
+      "can_generate_exam": false,
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "password": "palamana",
+      "package_id": "pkg-basic"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "category": "TWK",
+      "question_text": "Menurut UUD 1945 yang telah diamandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan yang berada di bawahnya serta oleh sebuah...",
+      "options": [
+        "A. Komisi Yudisial",
+        "B. Mahkamah Konstitusi",
+        "C. Dewan Perwakilan Rakyat",
+        "D. Badan Pemeriksa Keuangan",
+        "E. Majelis Permusyawaratan Rakyat"
+      ],
+      "correct_answer": "B",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan: Berdasarkan UUD 1945 Pasal 24 Ayat (2) hasil amandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan di bawahnya (Peradilan Umum, Agama, Militer, PTUN) serta oleh sebuah Mahkamah Konstitusi (MK)."
+    },
+    {
+      "id": "q2",
+      "category": "TWK",
+      "question_text": "Sikap rela berkorban demi kepentingan bangsa dan negara di atas kepentingan pribadi atau golongan merupakan perwujudan dari sila Pancasila yang ke...",
+      "options": [
+        "A. Satu",
+        "B. Dua",
+        "C. Tiga",
+        "D. Empat",
+        "E. Lima"
+      ],
+      "correct_answer": "C",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan: Rela berkorban untuk kepentingan negara merupakan salah satu butir pengamalan Pancasila Sila ke-3, yaitu \"Persatuan Indonesia\". Sila ini menekankan persatuan, kesatuan, serta kepentingan bangsa di atas ego sektoral."
+    },
+    {
+      "id": "q3",
+      "category": "TWK",
+      "question_text": "Sidang pertama BPUPKI yang diselenggarakan pada tanggal 29 Mei - 1 Juni 1945 berfokus membahas tentang...",
+      "options": [
+        "A. Rancangan Undang-Undang Dasar",
+        "B. Bentuk Pemerintahan Negara",
+        "C. Batas Wilayah Negara Indonesia",
+        "D. Rumusan Dasar Negara Indonesia",
+        "E. Pengangkatan Presiden dan Wakil Presiden"
+      ],
+      "correct_answer": "D",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan: Sidang pertama BPUPKI berfokus merumuskan Dasar Negara Indonesia Merdeka (yang melahirkan Pancasila pada 1 Juni 1945). Sedangkan rancangan UUD dibahas pada sidang kedua tanggal 10 - 17 Juli 1945."
+    },
+    {
+      "id": "q4",
+      "category": "TIU",
+      "question_text": "Carilah kelanjutan dari deret angka berikut: 3, 6, 12, 21, 33, ...",
+      "options": [
+        "A. 45",
+        "B. 48",
+        "C. 46",
+        "D. 52",
+        "E. 50"
+      ],
+      "correct_answer": "B",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan: Pola penambahan angka adalah kelipatan 3 secara berurutan: 3 ke 6 (+3), 6 ke 12 (+6), 12 ke 21 (+9), 21 ke 33 (+12). Maka angka berikutnya ditambah 15, yaitu 33 + 15 = 48."
+    },
+    {
+      "id": "q5",
+      "category": "TIU",
+      "question_text": "APRESIASI : KARYA SENI = ...",
+      "options": [
+        "A. Hukuman : Kejahatan",
+        "B. Penghargaan : Prestasi",
+        "C. Penilaian : Ujian",
+        "D. Investasi : Modal",
+        "E. Konsumsi : Makanan"
+      ],
+      "correct_answer": "B",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan: Analogi hubungan fungsi. Apresiasi diberikan atas adanya Karya Seni. Begitu pula Penghargaan diberikan atas adanya Prestasi."
+    },
+    {
+      "id": "q6",
+      "category": "TIU",
+      "question_text": "Semua mahasiswa yang rajin belajar pasti lulus ujian. Sebagian mahasiswa Teknik Sipil tidak lulus ujian. Kesimpulan yang paling tepat adalah...",
+      "options": [
+        "A. Semua mahasiswa Teknik Sipil rajin belajar.",
+        "B. Semua mahasiswa Teknik Sipil tidak rajin belajar.",
+        "C. Sebagian mahasiswa Teknik Sipil rajin belajar.",
+        "D. Sebagian mahasiswa Teknik Sipil tidak rajin belajar.",
+        "E. Semua yang tidak lulus ujian bukan mahasiswa Teknik Sipil."
+      ],
+      "correct_answer": "D",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan: Hukum silogisme. Jika semua mahasiswa rajin pasti lulus, dan sebagian mahasiswa Teknik Sipil tidak lulus, maka disimpulkan bahwa sebagian mahasiswa Teknik Sipil tersebut tidak rajin belajar."
+    },
+    {
+      "id": "q7",
+      "category": "TKP",
+      "question_text": "Ketika Anda sedang sibuk menyelesaikan tugas kantor yang sangat penting, tiba-tiba seorang rekan kerja datang meminta bantuan untuk memecahkan masalah sistem komputernya yang mendesak. Sikap Anda adalah...",
+      "options": [
+        "A. Menolaknya secara kasar karena tugas Anda jauh lebih penting dan harus segera selesai.",
+        "B. Menghentikan tugas Anda sepenuhnya dan membantunya hingga selesai tanpa peduli pekerjaan Anda terbengkalai.",
+        "C. Memberitahunya secara sopan bahwa Anda sedang sibuk, lalu menyarankannya untuk meminta bantuan ke bagian IT atau berjanji membantunya setelah tugas Anda selesai.",
+        "D. Mengabaikan permintaannya dan pura-pura tidak mendengar agar dia pergi dengan sendirinya.",
+        "E. Menyuruhnya untuk mengerjakan sendiri karena itu adalah tanggung jawabnya masing-masing."
+      ],
+      "correct_answer": "{\"A\":1,\"B\":3,\"C\":5,\"D\":2,\"E\":4}",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan (Aspek Jejaring Kerja & Profesionalisme): Opsi C bernilai 5 karena mengutamakan keprofesionalan dalam menyelesaikan tugas pribadi yang krusial, sembari menawarkan solusi alternatif yang ramah tanpa mengabaikan rekan kerja."
+    },
+    {
+      "id": "q8",
+      "category": "TKP",
+      "question_text": "Ketika Anda ditunjuk sebagai ketua tim dalam sebuah proyek krusial, salah satu anggota tim Anda menunjukkan penurunan performa kerja yang signifikan dan sering terlambat mengumpulkan tugasnya. Tindakan pertama yang akan Anda lakukan adalah...",
+      "options": [
+        "A. Melaporkan performanya yang buruk kepada atasan agar dia segera diganti.",
+        "B. Memarahinya di depan anggota tim lain agar dia termotivasi untuk bekerja lebih cepat.",
+        "C. Memanggilnya secara pribadi untuk berdiskusi, mendengarkan kendalanya, dan mencari solusi bersama demi kelancaran proyek.",
+        "D. Membiarkannya saja dan mengambil alih seluruh pekerjaannya secara sepihak.",
+        "E. Mengabaikan kontribusinya dan tidak melibatkan dirinya lagi dalam rapat-rapat koordinasi."
+      ],
+      "correct_answer": "{\"A\":2,\"B\":1,\"C\":5,\"D\":4,\"E\":3}",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan (Aspek Kemampuan Mengelola Orang Lain): Opsi C bernilai 5 karena langkah bijaksana seorang pemimpin adalah memanggil secara personal untuk mengidentifikasi masalah secara persuasif dan mencari solusi bersama demi tim."
+    },
+    {
+      "id": "q9",
+      "category": "TKP",
+      "question_text": "Anda sedang melayani antrean masyarakat di loket pelayanan publik. Tiba-tiba seorang warga berteriak marah karena merasa terlalu lama menunggu dan menuduh Anda tidak bekerja dengan profesional. Sikap Anda menghadapi situasi ini adalah...",
+      "options": [
+        "A. Ikut berteriak membalas tuduhannya agar warga lain tahu bahwa Anda sudah bekerja keras.",
+        "B. Tetap bersikap tenang, mendengarkan keluhannya dengan empati, meminta maaf atas ketidaknyamanan, dan menjelaskan situasi pelayanan dengan ramah serta menyelesaikannya secepat mungkin.",
+        "C. Meninggalkan loket dan memanggil satpam untuk mengusir warga tersebut keluar dari gedung.",
+        "D. Diam saja dan cemberut selama melayani warga tersebut untuk menunjukkan bahwa Anda tersinggung.",
+        "E. Menutup loket pelayanan sementara waktu sampai suasana menjadi kondusif kembali."
+      ],
+      "correct_answer": "{\"A\":1,\"B\":5,\"C\":3,\"D\":2,\"E\":4}",
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "explanation": "Pembahasan (Aspek Pelayanan Publik): Opsi B bernilai 5 karena pelayan publik dituntut untuk memiliki kendali diri yang kuat, mendengarkan kritik secara ramah, empati, dan tidak terpancing emosi negatif."
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess-3",
+      "user_id": "user-uuid",
+      "exam_type": "ai",
+      "current_question_index": 9,
+      "saved_answers": {},
+      "remaining_time_seconds": 0,
+      "status": "completed",
+      "final_score": 410,
+      "category_scores": {
+        "TIU": 130,
+        "TWK": 120,
+        "TKP": 160
+      },
+      "created_at": "2026-06-10T07:32:19.035Z",
+      "completed_at": "2026-06-10T08:27:19.035Z",
+      "subject": "cpns"
+    }
+  ],
+  "packages": [
+    {
+      "id": "pkg-basic",
+      "name": "Paket Basic (Uji Coba)",
+      "price": 0,
+      "description": "Sangat cocok untuk pemula yang ingin mencoba sistem CAT CPNS secara gratis.",
+      "features": [
+        "Akses 30 Soal Acak (10 TWK, 10 TIU, 10 TKP)",
+        "Durasi Ujian 30 Menit",
+        "Pembahasan Soal Lengkap",
+        "Statistik & Progres Belajar Dasar"
+      ],
+      "created_at": "2026-06-11T07:32:19.035Z"
+    },
+    {
+      "id": "pkg-premium",
+      "name": "Paket Premium CAT",
+      "price": 10000,
+      "description": "Akses penuh ke semua simulasi tryout manual kurasi standar CAT BKN RI.",
+      "features": [
+        "Akses Penuh 110 Soal CAT Lengkap",
+        "Durasi Ujian 100 Menit",
+        "Pembahasan Soal Detil & Komprehensif",
+        "Grafik Analisis Progres Belajar",
+        "Sistem Perbandingan Ambang Batas"
+      ],
+      "created_at": "2026-06-11T07:32:19.035Z"
+    },
+    {
+      "id": "pkg-platinum",
+      "name": "Paket Platinum AI",
+      "price": 99000,
+      "description": "Solusi belajar cerdas menggunakan soal kustom tak terbatas dari Gemini AI.",
+      "features": [
+        "Semua Fitur Paket Premium CAT",
+        "Akses Simulasi Adaptif Gemini AI",
+        "Penjanaan Soal Tak Terbatas secara Real-time",
+        "Rekomendasi Area Kelemahan Materi",
+        "Prioritas Layanan Dukungan Admin"
+      ],
+      "created_at": "2026-06-11T07:32:19.035Z"
+    }
+  ]
+}

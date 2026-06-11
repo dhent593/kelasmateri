@@ -125,64 +125,130 @@ function ReviewContent() {
         
         {/* Score Board Cards */}
         <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
-          <div className="text-center sm:text-left">
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Nilai Akhir: {session.final_score} Poin</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Review detail nilai kelulusan ambang batas passing grade SKD CPNS 2026.</p>
+          <div className="text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                Nilai Akhir: {session.final_score} Poin
+                {session.subject === 'toefl' && <span className="text-sm font-bold text-slate-400 ml-2">(Skala PBT 310 - 677)</span>}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {session.subject === 'toefl'
+                  ? 'Review detail nilai per bagian simulasi TOEFL Bahasa Inggris (Target Skor: 500+).'
+                  : 'Review detail nilai kelulusan ambang batas passing grade SKD CPNS 2026.'}
+              </p>
+            </div>
+            {session.subject === 'toefl' && (
+              <div className="shrink-0">
+                <span className={`px-4 py-1.5 rounded-full font-black text-xs tracking-wider uppercase ${
+                  (session.final_score || 310) >= 500
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                }`}>
+                  {(session.final_score || 310) >= 500 ? 'Target Terpenuhi' : 'Di Bawah Target'}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* TIU Card */}
-            <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-500">TIU (Target 80)</span>
-                <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase ${
-                  (session.category_scores?.TIU || 0) >= PASSING_GRADES.TIU
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {(session.category_scores?.TIU || 0) >= PASSING_GRADES.TIU ? 'Lulus' : 'Gagal'}
-                </span>
+          {session.subject === 'toefl' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Listening Comprehension Card */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-indigo-50/10 dark:bg-indigo-950/10 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500">Listening Comprehension</span>
+                  <span className="px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                    Target &gt;= 5
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">
+                  {session.category_scores?.Listening || 0}{' '}
+                  <span className="text-xs font-semibold text-slate-400">/ 10 Benar</span>
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white">{session.category_scores?.TIU} <span className="text-xs font-semibold text-slate-400">/ 175</span></div>
-            </div>
 
-            {/* TWK Card */}
-            <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-500">TWK (Target 65)</span>
-                <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase ${
-                  (session.category_scores?.TWK || 0) >= PASSING_GRADES.TWK
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {(session.category_scores?.TWK || 0) >= PASSING_GRADES.TWK ? 'Lulus' : 'Gagal'}
-                </span>
+              {/* Structure and Written Expression Card */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-purple-50/10 dark:bg-purple-950/10 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500">Structure &amp; Written Exp.</span>
+                  <span className="px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    Target &gt;= 5
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">
+                  {session.category_scores?.Structure || 0}{' '}
+                  <span className="text-xs font-semibold text-slate-400">/ 10 Benar</span>
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white">{session.category_scores?.TWK} <span className="text-xs font-semibold text-slate-400">/ 150</span></div>
-            </div>
 
-            {/* TKP Card */}
-            <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-500">TKP (Target 166)</span>
-                <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase ${
-                  (session.category_scores?.TKP || 0) >= PASSING_GRADES.TKP
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {(session.category_scores?.TKP || 0) >= PASSING_GRADES.TKP ? 'Lulus' : 'Gagal'}
-                </span>
+              {/* Reading Comprehension Card */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-teal-50/10 dark:bg-teal-950/10 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500">Reading Comprehension</span>
+                  <span className="px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                    Target &gt;= 5
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">
+                  {session.category_scores?.Reading || 0}{' '}
+                  <span className="text-xs font-semibold text-slate-400">/ 10 Benar</span>
+                </div>
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white">{session.category_scores?.TKP} <span className="text-xs font-semibold text-slate-400">/ 225</span></div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* TIU Card */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500">TIU (Target 80)</span>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase ${
+                    (session.category_scores?.TIU || 0) >= PASSING_GRADES.TIU
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                  }`}>
+                    {(session.category_scores?.TIU || 0) >= PASSING_GRADES.TIU ? 'Lulus' : 'Gagal'}
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">{session.category_scores?.TIU} <span className="text-xs font-semibold text-slate-400">/ 175</span></div>
+              </div>
+
+              {/* TWK Card */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500">TWK (Target 65)</span>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase ${
+                    (session.category_scores?.TWK || 0) >= PASSING_GRADES.TWK
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                  }`}>
+                    {(session.category_scores?.TWK || 0) >= PASSING_GRADES.TWK ? 'Lulus' : 'Gagal'}
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">{session.category_scores?.TWK} <span className="text-xs font-semibold text-slate-400">/ 150</span></div>
+              </div>
+
+              {/* TKP Card */}
+              <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500">TKP (Target 166)</span>
+                  <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] tracking-wider uppercase ${
+                    (session.category_scores?.TKP || 0) >= PASSING_GRADES.TKP
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                  }`}>
+                    {(session.category_scores?.TKP || 0) >= PASSING_GRADES.TKP ? 'Lulus' : 'Gagal'}
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">{session.category_scores?.TKP} <span className="text-xs font-semibold text-slate-400">/ 225</span></div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Questions and Answers List */}
         <section className="space-y-8">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-brand-600" />
-            <span>Kunci Jawaban & Pembahasan Lengkap</span>
+            <span>Kunci Jawaban &amp; Pembahasan Lengkap</span>
           </h3>
 
           <div className="space-y-6">
@@ -216,7 +282,13 @@ function ReviewContent() {
                           ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
                           : q.category === 'TIU'
                           ? 'bg-pink-50 dark:bg-pink-950/20 text-pink-600 dark:text-pink-400'
-                          : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
+                          : q.category === 'TKP'
+                          ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
+                          : q.category === 'Listening'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400'
+                          : q.category === 'Structure'
+                          ? 'bg-purple-50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400'
+                          : 'bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400'
                       }`}>
                         {q.category}
                       </span>
@@ -233,23 +305,23 @@ function ReviewContent() {
                           isCorrect ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                               <CheckCircle className="w-3.5 h-3.5" />
-                              <span>Benar (+5)</span>
+                              <span>Benar{session.subject === 'toefl' ? '' : ' (+5)'}</span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500">
                               <XCircle className="w-3.5 h-3.5" />
-                              <span>Salah (0)</span>
+                              <span>Salah{session.subject === 'toefl' ? '' : ' (0)'}</span>
                             </span>
                           )
                         ) : (
-                          <span className="text-[10px] text-slate-400 font-bold">Tidak Dijawab (0)</span>
+                          <span className="text-[10px] text-slate-400 font-bold">Tidak Dijawab{session.subject === 'toefl' ? '' : ' (0)'}</span>
                         )}
                       </div>
                     )}
                   </div>
 
                   {/* Question Text */}
-                  <h4 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white leading-relaxed">
+                  <h4 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white leading-relaxed whitespace-pre-wrap">
                     {q.question_text}
                   </h4>
 

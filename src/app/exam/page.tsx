@@ -205,8 +205,37 @@ function ExamContent() {
     }
   };
 
-  // Standard CPNS Scoring Algorithm
+  // Standard CPNS & TOEFL Scoring Algorithm
   const calculateScores = () => {
+    if (session?.subject === 'toefl') {
+      let listeningCorrect = 0;
+      let structureCorrect = 0;
+      let readingCorrect = 0;
+
+      questions.forEach((q) => {
+        const userAnswer = answers[q.id];
+        if (userAnswer === q.correct_answer) {
+          if (q.category === 'Listening') listeningCorrect++;
+          else if (q.category === 'Structure') structureCorrect++;
+          else if (q.category === 'Reading') readingCorrect++;
+        }
+      });
+
+      // Calculate total raw score (out of 30)
+      const totalRaw = listeningCorrect + structureCorrect + readingCorrect;
+      // Convert to TOEFL PBT scaled score (310 to 677)
+      const toeflScale = 310 + Math.round((totalRaw / 30) * 367);
+
+      return {
+        finalScore: toeflScale,
+        categoryScores: {
+          Listening: listeningCorrect,
+          Structure: structureCorrect,
+          Reading: readingCorrect
+        }
+      };
+    }
+
     let tiuScore = 0;
     let twkScore = 0;
     let tkpScore = 0;
@@ -367,7 +396,13 @@ function ExamContent() {
                     ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
                     : currentQuestion?.category === 'TIU'
                     ? 'bg-pink-50 dark:bg-pink-950/20 text-pink-600 dark:text-pink-400'
-                    : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
+                    : currentQuestion?.category === 'TKP'
+                    ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
+                    : currentQuestion?.category === 'Listening'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400'
+                    : currentQuestion?.category === 'Structure'
+                    ? 'bg-purple-50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400'
+                    : 'bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400'
                 }`}>
                   {currentQuestion?.category}
                 </span>
@@ -377,7 +412,7 @@ function ExamContent() {
 
             {/* Question Text */}
             <div className="space-y-4">
-              <h2 className="text-base sm:text-lg text-slate-900 dark:text-white leading-relaxed font-semibold">
+              <h2 className="text-base sm:text-lg text-slate-900 dark:text-white leading-relaxed font-semibold whitespace-pre-wrap">
                 {currentQuestion?.question_text}
               </h2>
             </div>
@@ -454,106 +489,209 @@ function ExamContent() {
             
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-850">
               {(() => {
-                const twk = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'TWK');
-                const tiu = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'TIU');
-                const tkp = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'TKP');
+                if (session?.subject === 'toefl') {
+                  const listening = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'Listening');
+                  const structure = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'Structure');
+                  const reading = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'Reading');
 
-                return (
-                  <>
-                    {/* TWK Section */}
-                    {twk.length > 0 && (
-                      <div>
-                        <div className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-1.5 tracking-wider uppercase flex justify-between">
-                          <span>TWK</span>
-                          <span className="text-slate-400 font-semibold">{twk.length} Soal</span>
+                  return (
+                    <>
+                      {/* Listening Section */}
+                      {listening.length > 0 && (
+                        <div>
+                          <div className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 mb-1.5 tracking-wider uppercase flex justify-between">
+                            <span>Listening</span>
+                            <span className="text-slate-400 font-semibold">{listening.length} Soal</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {listening.map((q) => {
+                              const isActive = currentIndex === q.idx;
+                              const isAnswered = !!answers[q.id];
+                              return (
+                                <button
+                                  key={q.id}
+                                  onClick={() => handleJumpToQuestion(q.idx)}
+                                  className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
+                                      : isAnswered
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
+                                  }`}
+                                >
+                                  {q.idx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {twk.map((q) => {
-                            const isActive = currentIndex === q.idx;
-                            const isAnswered = !!answers[q.id];
-                            return (
-                              <button
-                                key={q.id}
-                                onClick={() => handleJumpToQuestion(q.idx)}
-                                className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
-                                  isActive
-                                    ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
-                                    : isAnswered
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
-                                }`}
-                              >
-                                {q.idx + 1}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* TIU Section */}
-                    {tiu.length > 0 && (
-                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40">
-                        <div className="text-[10px] font-black text-pink-600 dark:text-pink-400 mb-1.5 tracking-wider uppercase flex justify-between">
-                          <span>TIU</span>
-                          <span className="text-slate-400 font-semibold">{tiu.length} Soal</span>
+                      {/* Structure Section */}
+                      {structure.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                          <div className="text-[10px] font-black text-purple-600 dark:text-purple-400 mb-1.5 tracking-wider uppercase flex justify-between">
+                            <span>Structure</span>
+                            <span className="text-slate-400 font-semibold">{structure.length} Soal</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {structure.map((q) => {
+                              const isActive = currentIndex === q.idx;
+                              const isAnswered = !!answers[q.id];
+                              return (
+                                <button
+                                  key={q.id}
+                                  onClick={() => handleJumpToQuestion(q.idx)}
+                                  className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
+                                      : isAnswered
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
+                                  }`}
+                                >
+                                  {q.idx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {tiu.map((q) => {
-                            const isActive = currentIndex === q.idx;
-                            const isAnswered = !!answers[q.id];
-                            return (
-                              <button
-                                key={q.id}
-                                onClick={() => handleJumpToQuestion(q.idx)}
-                                className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
-                                  isActive
-                                    ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
-                                    : isAnswered
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
-                                }`}
-                              >
-                                {q.idx + 1}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* TKP Section */}
-                    {tkp.length > 0 && (
-                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40">
-                        <div className="text-[10px] font-black text-amber-600 dark:text-amber-400 mb-1.5 tracking-wider uppercase flex justify-between">
-                          <span>TKP</span>
-                          <span className="text-slate-400 font-semibold">{tkp.length} Soal</span>
+                      {/* Reading Section */}
+                      {reading.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                          <div className="text-[10px] font-black text-teal-600 dark:text-teal-400 mb-1.5 tracking-wider uppercase flex justify-between">
+                            <span>Reading</span>
+                            <span className="text-slate-400 font-semibold">{reading.length} Soal</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {reading.map((q) => {
+                              const isActive = currentIndex === q.idx;
+                              const isAnswered = !!answers[q.id];
+                              return (
+                                <button
+                                  key={q.id}
+                                  onClick={() => handleJumpToQuestion(q.idx)}
+                                  className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
+                                      : isAnswered
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
+                                  }`}
+                                >
+                                  {q.idx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {tkp.map((q) => {
-                            const isActive = currentIndex === q.idx;
-                            const isAnswered = !!answers[q.id];
-                            return (
-                              <button
-                                key={q.id}
-                                onClick={() => handleJumpToQuestion(q.idx)}
-                                className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
-                                  isActive
-                                    ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
-                                    : isAnswered
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
-                                }`}
-                              >
-                                {q.idx + 1}
-                              </button>
-                            );
-                          })}
+                      )}
+                    </>
+                  );
+                } else {
+                  const twk = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'TWK');
+                  const tiu = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'TIU');
+                  const tkp = questions.map((q, idx) => ({ ...q, idx })).filter(q => q.category === 'TKP');
+
+                  return (
+                    <>
+                      {/* TWK Section */}
+                      {twk.length > 0 && (
+                        <div>
+                          <div className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mb-1.5 tracking-wider uppercase flex justify-between">
+                            <span>TWK</span>
+                            <span className="text-slate-400 font-semibold">{twk.length} Soal</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {twk.map((q) => {
+                              const isActive = currentIndex === q.idx;
+                              const isAnswered = !!answers[q.id];
+                              return (
+                                <button
+                                  key={q.id}
+                                  onClick={() => handleJumpToQuestion(q.idx)}
+                                  className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
+                                      : isAnswered
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
+                                  }`}
+                                >
+                                  {q.idx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </>
-                );
+                      )}
+
+                      {/* TIU Section */}
+                      {tiu.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                          <div className="text-[10px] font-black text-pink-600 dark:text-pink-400 mb-1.5 tracking-wider uppercase flex justify-between">
+                            <span>TIU</span>
+                            <span className="text-slate-400 font-semibold">{tiu.length} Soal</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {tiu.map((q) => {
+                              const isActive = currentIndex === q.idx;
+                              const isAnswered = !!answers[q.id];
+                              return (
+                                <button
+                                  key={q.id}
+                                  onClick={() => handleJumpToQuestion(q.idx)}
+                                  className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
+                                      : isAnswered
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
+                                  }`}
+                                >
+                                  {q.idx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TKP Section */}
+                      {tkp.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40">
+                          <div className="text-[10px] font-black text-amber-600 dark:text-amber-400 mb-1.5 tracking-wider uppercase flex justify-between">
+                            <span>TKP</span>
+                            <span className="text-slate-400 font-semibold">{tkp.length} Soal</span>
+                          </div>
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {tkp.map((q) => {
+                              const isActive = currentIndex === q.idx;
+                              const isAnswered = !!answers[q.id];
+                              return (
+                                <button
+                                  key={q.id}
+                                  onClick={() => handleJumpToQuestion(q.idx)}
+                                  className={`w-full aspect-square rounded-lg text-xs font-black transition-all flex items-center justify-center cursor-pointer border ${
+                                    isActive
+                                      ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20 shadow-brand-500/10'
+                                      : isAnswered
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-slate-100 dark:bg-slate-950 text-slate-400 border-slate-200 dark:border-slate-850'
+                                  }`}
+                                >
+                                  {q.idx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                }
               })()}
             </div>
             

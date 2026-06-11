@@ -14,13 +14,14 @@ export interface UserProfile {
   email: string;
   role: 'admin' | 'user';
   can_generate_exam: boolean;
+  package_id?: string;
   created_at: string;
   password?: string; // Password stored for admin provisioned accounts
 }
 
 export interface Question {
   id: string;
-  category: 'TIU' | 'TWK' | 'TKP';
+  category: 'TIU' | 'TWK' | 'TKP' | 'Listening' | 'Structure' | 'Reading';
   question_text: string;
   options: string[]; // e.g. ["A. ...", "B. ..."]
   correct_answer: string; // TIU/TWK: 'A', 'B', etc. TKP: '{"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}'
@@ -41,16 +42,13 @@ export interface ExamSession {
   id: string;
   user_id: string;
   exam_type: 'ai' | 'manual';
+  subject?: 'cpns' | 'toefl';
   current_question_index: number;
   saved_answers: any; // Map of answers and snapshot of questions: { answers: Record<string, string>, questions?: Question[] }
   remaining_time_seconds: number;
   status: 'in_progress' | 'completed';
   final_score: number | null;
-  category_scores: {
-    TIU: number;
-    TWK: number;
-    TKP: number;
-  } | null;
+  category_scores: any;
   created_at: string;
   completed_at: string | null;
 }
@@ -210,6 +208,7 @@ const DEFAULT_USERS: UserProfile[] = [
     email: 'admin@kelasmateri.com',
     role: 'admin',
     can_generate_exam: true,
+    package_id: 'pkg-platinum',
     created_at: new Date().toISOString(),
     password: 'palamana'
   },
@@ -218,6 +217,7 @@ const DEFAULT_USERS: UserProfile[] = [
     email: 'user@kelasmateri.com',
     role: 'user',
     can_generate_exam: false,
+    package_id: 'pkg-basic',
     created_at: new Date().toISOString(),
     password: 'palamana'
   }
@@ -229,6 +229,7 @@ const DEFAULT_SESSIONS: ExamSession[] = [
     id: 'sess-1',
     user_id: 'user-uuid',
     exam_type: 'manual',
+    subject: 'cpns',
     current_question_index: 9,
     saved_answers: {},
     remaining_time_seconds: 0,
@@ -242,6 +243,7 @@ const DEFAULT_SESSIONS: ExamSession[] = [
     id: 'sess-2',
     user_id: 'user-uuid',
     exam_type: 'manual',
+    subject: 'cpns',
     current_question_index: 9,
     saved_answers: {},
     remaining_time_seconds: 0,
@@ -404,8 +406,28 @@ export const getClientStore = (): MockDbStore => {
   // Server-side: read from file to get the most updated state across bundles
   const fileData = readFromFile();
   if (fileData) {
+    let updated = false;
     if (!fileData.packages) {
       fileData.packages = [...DEFAULT_PACKAGES];
+      updated = true;
+    }
+    if (fileData.users) {
+      fileData.users.forEach(u => {
+        if (!u.package_id) {
+          u.package_id = u.role === 'admin' ? 'pkg-platinum' : 'pkg-basic';
+          updated = true;
+        }
+      });
+    }
+    if (fileData.sessions) {
+      fileData.sessions.forEach(s => {
+        if (!s.subject) {
+          s.subject = 'cpns';
+          updated = true;
+        }
+      });
+    }
+    if (updated) {
       writeToFile(fileData);
     }
     global._mockDb = fileData;
@@ -547,9 +569,9 @@ export const db = {
     return store.users.find(u => u.id === id) || null;
   },
 
-  createUser: async (email: string, role: 'admin' | 'user' = 'user', id?: string, password?: string): Promise<UserProfile> => {
+  createUser: async (email: string, role: 'admin' | 'user' = 'user', id?: string, password?: string, package_id: string = 'pkg-basic'): Promise<UserProfile> => {
     if (isClient) {
-      return await clientFetch('createUser', 'POST', { email, role, id, password });
+      return await clientFetch('createUser', 'POST', { email, role, id, password, package_id });
     }
 
     const newId = id || `user-${Math.random().toString(36).substr(2, 9)}`;
@@ -557,7 +579,8 @@ export const db = {
       id: newId,
       email,
       role,
-      can_generate_exam: email === 'admin@kelasmateri.com',
+      can_generate_exam: email === 'admin@kelasmateri.com' || package_id === 'pkg-platinum',
+      package_id,
       created_at: new Date().toISOString(),
       password: password || 'palamana'
     };
@@ -578,6 +601,10 @@ export const db = {
   updateUser: async (id: string, updates: Partial<UserProfile>): Promise<UserProfile | null> => {
     if (isClient) {
       return await clientFetch('updateUser', 'POST', { id, updates });
+    }
+
+    if (updates.package_id) {
+      updates.can_generate_exam = updates.package_id === 'pkg-platinum';
     }
 
     if (isSupabaseConfigured && supabase) {
@@ -746,7 +773,7 @@ export const db = {
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   },
 
-  createExamSession: async (session: Omit<ExamSession, 'id' | 'created_at' | 'completed_at' | 'final_score' | 'category_scores'>): Promise<ExamSession> => {
+  createExamSession: async (session: Omit<ExamSession, 'id' | 'created_at' | 'completed_at' | 'final_score' | 'category_scores'> & { subject?: 'cpns' | 'toefl' }): Promise<ExamSession> => {
     if (isClient) {
       return await clientFetch('createExamSession', 'POST', { session });
     }
@@ -754,6 +781,7 @@ export const db = {
     const newSession: ExamSession = {
       ...session,
       id: `sess-${Math.random().toString(36).substr(2, 9)}`,
+      subject: session.subject || 'cpns',
       final_score: null,
       category_scores: null,
       created_at: new Date().toISOString(),

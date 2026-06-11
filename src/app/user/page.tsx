@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Clock,
   MessageCircle,
-  Trash2
+  Trash2,
+  Languages
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { db, UserProfile, ExamSession, UserSession } from '@/lib/db';
@@ -31,6 +32,7 @@ export default function UserDashboard() {
   const [activeSession, setActiveSession] = useState<ExamSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingExam, setGeneratingExam] = useState(false);
+  const [generatingToefl, setGeneratingToefl] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -191,6 +193,51 @@ export default function UserDashboard() {
     }
   };
 
+  const handleStartToeflExam = async () => {
+    if (!userProfile) return;
+    if (userProfile.package_id !== 'pkg-platinum') return;
+    setGeneratingToefl(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/generate-toefl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userProfile.id }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Gagal menghubungi generator TOEFL AI.');
+      }
+
+      const data = await response.json();
+      const generatedQuestions = data.questions;
+
+      if (!generatedQuestions || generatedQuestions.length === 0) {
+        throw new Error('Tidak ada soal yang dihasilkan oleh AI.');
+      }
+
+      const newSession = await db.createExamSession({
+        user_id: userProfile.id,
+        exam_type: 'ai',
+        subject: 'toefl',
+        current_question_index: 0,
+        saved_answers: {
+          answers: {},
+          questions: generatedQuestions
+        },
+        remaining_time_seconds: 30 * 60, // 30 minutes for 30 questions
+        status: 'in_progress'
+      });
+
+      router.push(`/exam?id=${newSession.id}`);
+    } catch (err: any) {
+      setError(err.message || 'Gagal membuat simulasi TOEFL AI. Silakan coba kembali.');
+      setGeneratingToefl(false);
+    }
+  };
+
   // Calculations for dashboard indicators
   const completedSessions = sessionsList.filter(s => s.status === 'completed');
   const totalCompleted = completedSessions.length;
@@ -299,33 +346,60 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* 1. Exam Control Panel */}
-        <section className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-          {/* Resume Exam Banner if exists */}
-          {activeSession ? (
-            <div className="md:col-span-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-amber-500/10 flex flex-col sm:flex-row items-center justify-between gap-6 animate-fade-in">
-              <div className="space-y-2 text-center sm:text-left">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold uppercase tracking-widest">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Ada Ujian Aktif</span>
-                </div>
-                <h2 className="text-2xl font-bold">Simulasi Anda Sedang Di-Jeda</h2>
-                <p className="opacity-90 text-sm max-w-xl">
-                  Anda memiliki ujian tipe <span className="font-bold uppercase">{activeSession.exam_type}</span> yang belum selesai. Sisa waktu pengerjaan: {Math.floor(activeSession.remaining_time_seconds / 60)} menit.
-                </p>
+        {/* Resume Exam Banner if exists */}
+        {activeSession ? (
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-amber-500/10 flex flex-col sm:flex-row items-center justify-between gap-6 animate-fade-in w-full">
+            <div className="space-y-2 text-center sm:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold uppercase tracking-widest">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Ada Ujian Aktif</span>
               </div>
-              <button
-                onClick={() => router.push(`/exam?id=${activeSession.id}`)}
-                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-orange-600 hover:bg-slate-50 font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 cursor-pointer scale-105"
-              >
-                <Play className="w-5 h-5 fill-current" />
-                <span>Lanjutkan Ujian</span>
-              </button>
+              <h2 className="text-2xl font-bold">Simulasi Anda Sedang Di-Jeda</h2>
+              <p className="opacity-90 text-sm max-w-xl">
+                Anda memiliki ujian tipe <span className="font-bold uppercase">{activeSession.exam_type}</span> ({activeSession.subject || 'cpns'}) yang belum selesai. Sisa waktu pengerjaan: {Math.floor(activeSession.remaining_time_seconds / 60)} menit.
+              </p>
             </div>
-          ) : null}
+            <button
+              onClick={() => router.push(`/exam?id=${activeSession.id}`)}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-orange-600 hover:bg-slate-50 font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 cursor-pointer scale-105"
+            >
+              <Play className="w-5 h-5 fill-current" />
+              <span>Lanjutkan Ujian</span>
+            </button>
+          </div>
+        ) : null}
 
-          {/* Start New Exam Box */}
-          <div className="md:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
+        {/* 1. Quick Stats Row */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Skor Tertinggi</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{highestScore}</span>
+              <span className="text-xs text-slate-400">Poin</span>
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Simulasi Diikuti</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{totalCompleted}</span>
+              <span className="text-xs text-slate-400">paket ujian</span>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Rata-rata Skor</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-black text-brand-600 dark:text-brand-400 tracking-tight">{averageScore}</span>
+              <span className="text-xs text-slate-400">Poin</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. Exam Control Panel Grid */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          {/* Start CPNS Exam Box */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
             
             <div className="space-y-4">
@@ -380,7 +454,7 @@ export default function UserDashboard() {
                 {/* Tooltip Locked */}
                 {!userProfile?.can_generate_exam && (
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-[11px] py-2 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 text-center font-semibold border border-slate-800 z-10">
-                    Akses dikunci oleh Admin. Minta persetujuan di dashboard admin.
+                    Akses dikunci oleh Admin. Hubungi Admin via WhatsApp untuk mengaktifkan.
                   </div>
                 )}
               </div>
@@ -406,30 +480,61 @@ export default function UserDashboard() {
             )}
           </div>
 
-          {/* Quick Stats Grid */}
-          <div className="md:col-span-5 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-1 gap-4 items-stretch">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-              <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Skor Tertinggi</span>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{highestScore}</span>
-                <span className="text-xs text-slate-400">/ 550</span>
-              </div>
-            </div>
+          {/* Start TOEFL Exam Box */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
             
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-              <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Simulasi Diikuti</span>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{totalCompleted}</span>
-                <span className="text-xs text-slate-400">paket ujian</span>
+            {/* Overlay Locked */}
+            {userProfile?.package_id !== 'pkg-platinum' && (
+              <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-white text-lg">Modul TOEFL AI Terkunci</h4>
+                  <p className="text-xs text-slate-400 max-w-[280px]">
+                    Simulasi TOEFL Inggris dinamis memerlukan aktivasi Paket Platinum. Hubungi Admin via WhatsApp.
+                  </p>
+                </div>
+                <a
+                  href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin mengaktifkan modul TOEFL AI (Paket Platinum) untuk akun saya: ${userProfile?.email || ''}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 cursor-pointer"
+                >
+                  <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
+                    <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.73.44 3.36 1.21 4.79L2 22l5.37-1.3c1.37.74 2.93 1.17 4.63 1.17 5.52 0 10-4.48 10-10S17.52 2 12.004 2zM16.8 15.3c-.2.5-.9.9-1.4 1-1 .2-2.2-.2-3.6-1-1.7-.9-3-2.6-3.8-4-.4-.5-.6-1.1-.6-1.7 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4 0 .5l-.5.6c-.1.2-.2.4-.1.6.4.7.9 1.4 1.5 2 .6.5 1.2.9 1.9 1.2.2.1.4.1.6-.1l.5-.6c.2-.2.4-.2.6-.1l1.7.8c.3.1.4.3.4.5s0 .9-.3 1.2z" />
+                  </svg>
+                  <span>Hubungi Admin untuk Aktivasi</span>
+                </a>
               </div>
+            )}
+            
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Languages className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Simulasi TOEFL Inggris (AI)</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
+                Uji kemampuan bahasa Inggris Anda dengan simulasi TOEFL PBT. Soal terbagi atas Listening, Structure, dan Reading yang dijana secara cerdas oleh AI.
+              </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-              <span className="text-xs font-bold text-slate-400 tracking-wider uppercase">Rata-rata Skor</span>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-3xl font-black text-brand-600 dark:text-brand-400 tracking-tight">{averageScore}</span>
-                <span className="text-xs text-slate-400">Poin</span>
-              </div>
+            <div className="mt-8 flex gap-4 items-center">
+              <button
+                onClick={handleStartToeflExam}
+                disabled={generatingToefl || userProfile?.package_id !== 'pkg-platinum'}
+                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-700 hover:to-indigo-600 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-500/10"
+              >
+                {generatingToefl ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-white" />
+                    <span>Kerjakan Simulasi TOEFL AI</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </section>
@@ -454,7 +559,7 @@ export default function UserDashboard() {
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800" />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} domain={[0, 550]} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} domain={[0, 700]} />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'rgba(15, 23, 42, 0.9)', 
@@ -613,21 +718,31 @@ export default function UserDashboard() {
                               ? 'bg-purple-50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900/30'
                               : 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/30'
                           }`}>
-                            {s.exam_type} Simulation
+                            {s.exam_type} Simulation ({s.subject || 'cpns'})
                           </span>
                           <span className="text-xs font-bold text-slate-900 dark:text-white">
-                            Skor: {s.final_score}
+                            Skor: {s.final_score} {s.subject === 'toefl' ? '(TOEFL)' : ''}
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-400 font-semibold">{dateStr}</div>
                       </div>
-
+ 
                       <div className="flex items-center gap-4">
                         {/* Breakdown preview */}
                         <div className="hidden md:flex gap-3 text-[10px] font-bold text-slate-400 uppercase">
-                          <span>TIU: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.TIU || 0}</span></span>
-                          <span>TWK: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.TWK || 0}</span></span>
-                          <span>TKP: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.TKP || 0}</span></span>
+                          {s.subject === 'toefl' ? (
+                            <>
+                              <span>Listening: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.Listening || 0}</span></span>
+                              <span>Structure: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.Structure || 0}</span></span>
+                              <span>Reading: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.Reading || 0}</span></span>
+                            </>
+                          ) : (
+                            <>
+                              <span>TIU: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.TIU || 0}</span></span>
+                              <span>TWK: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.TWK || 0}</span></span>
+                              <span>TKP: <span className="text-slate-700 dark:text-slate-350">{s.category_scores?.TKP || 0}</span></span>
+                            </>
+                          )}
                         </div>
 
                         <button
