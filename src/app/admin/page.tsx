@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Award, 
   Users, 
@@ -494,12 +495,14 @@ export default function AdminDashboard() {
       <header className="glass-premium border-b border-slate-200/50 dark:border-slate-800/40 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-500 flex items-center justify-center text-white shadow-md">
-              <Award className="w-5 h-5" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-              kelas<span className="text-brand-600 font-extrabold">materi</span>
-            </span>
+            <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-500 flex items-center justify-center text-white shadow-md">
+                <Award className="w-5 h-5" />
+              </div>
+              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                kelas<span className="text-brand-600 font-extrabold">materi</span>
+              </span>
+            </Link>
             <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400">
               Admin
             </span>
