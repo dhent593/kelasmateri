@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  MessageCircle
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -378,6 +379,19 @@ export default function LandingPage() {
           <p>&copy; {new Date().getFullYear()} kelasmateri. All rights reserved. Platform Tryout Mandiri & Simulasi CPNS 2026.</p>
         </div>
       </footer>
+      {/* Floating WhatsApp Contact Button */}
+      <a
+        href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin berkonsultasi mengenai platform dan simulasi tryout CPNS.`)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-40 bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+        title="Hubungi Admin"
+      >
+        <MessageCircle className="w-6 h-6 fill-current text-white/90" />
+        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap text-sm font-bold">
+          Hubungi Admin
+        </span>
+      </a>
     </div>
   );
 }

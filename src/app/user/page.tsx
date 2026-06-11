@@ -13,7 +13,8 @@ import {
   ShieldAlert, 
   Sparkles,
   RefreshCw,
-  Clock
+  Clock,
+  MessageCircle
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { db, UserProfile, ExamSession, UserSession } from '@/lib/db';
@@ -356,6 +357,23 @@ export default function UserDashboard() {
                 )}
               </div>
             </div>
+
+            {!userProfile?.can_generate_exam && (
+              <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-900/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs animate-fade-in">
+                <div className="text-amber-800 dark:text-amber-400 font-medium text-center sm:text-left leading-relaxed">
+                  Modul Simulasi AI masih terkunci. Hubungi Admin via WhatsApp untuk mengaktifkan akses Anda.
+                </div>
+                <a
+                  href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin meminta aktivasi akses Simulasi AI untuk akun saya: ${userProfile?.email || ''}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shrink-0 transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/10 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 fill-current" />
+                  <span>Hubungi Admin</span>
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Quick Stats Grid */}
@@ -633,6 +651,20 @@ export default function UserDashboard() {
           </div>
         </div>
       )}
+
+      {/* Floating WhatsApp Contact Button */}
+      <a
+        href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin berkonsultasi mengenai akses tryout/simulasi yang terkunci.`)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-40 bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+        title="Hubungi Admin"
+      >
+        <MessageCircle className="w-6 h-6 fill-current text-white/90" />
+        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap text-sm font-bold">
+          Hubungi Admin
+        </span>
+      </a>
     </div>
   );
 }
