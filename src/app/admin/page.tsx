@@ -17,14 +17,14 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { db, UserProfile, Question, UserSession } from '@/lib/db';
+import { db, UserProfile, Question, UserSession, Package } from '@/lib/db';
 import { getServerSession, logoutAction } from '@/lib/auth-actions';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [session, setSession] = useState<UserSession | null>(null);
-  const [activeTab, setActiveTab] = useState<'users' | 'questions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'questions' | 'packages'>('users');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -60,6 +60,15 @@ export default function AdminDashboard() {
   const [tkpScoreD, setTkpScoreD] = useState(2);
   const [tkpScoreE, setTkpScoreE] = useState(1);
 
+  // Packages State
+  const [packagesList, setPackagesList] = useState<Package[]>([]);
+  const [isEditingPackage, setIsEditingPackage] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+  const [formPackageName, setFormPackageName] = useState('');
+  const [formPackagePrice, setFormPackagePrice] = useState(0);
+  const [formPackageDescription, setFormPackageDescription] = useState('');
+  const [formPackageFeaturesText, setFormPackageFeaturesText] = useState('');
+
   useEffect(() => {
     fetchSessionAndData();
   }, []);
@@ -80,6 +89,9 @@ export default function AdminDashboard() {
 
       const questions = await db.getQuestions();
       setQuestionsList(questions);
+
+      const packages = await db.getPackages();
+      setPackagesList(packages);
     } catch (e: any) {
       setError('Gagal memuat data administrasi.');
     } finally {
@@ -327,6 +339,91 @@ export default function AdminDashboard() {
     setTkpScoreE(1);
   };
 
+  // --- PACKAGE CONTROLLERS ---
+  const handleSavePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    const name = formPackageName.trim();
+    const price = Number(formPackagePrice);
+    const description = formPackageDescription.trim();
+    
+    const features = formPackageFeaturesText
+      .split('\n')
+      .map(f => f.trim())
+      .filter(f => f.length > 0);
+
+    if (!name) {
+      setError('Nama paket wajib diisi.');
+      return;
+    }
+
+    if (isNaN(price) || price < 0) {
+      setError('Harga paket harus bernilai 0 atau lebih.');
+      return;
+    }
+
+    try {
+      if (isEditingPackage && editingPackageId) {
+        await db.updatePackage(editingPackageId, {
+          name,
+          price,
+          description: description || undefined,
+          features
+        });
+        setSuccess('Paket berhasil diperbarui.');
+      } else {
+        await db.createPackage({
+          name,
+          price,
+          description: description || undefined,
+          features
+        });
+        setSuccess('Paket baru berhasil ditambahkan.');
+      }
+
+      resetPackageForm();
+      const list = await db.getPackages();
+      setPackagesList(list);
+    } catch (err: any) {
+      setError('Gagal menyimpan paket.');
+    }
+  };
+
+  const handleEditPackageClick = (pkg: Package) => {
+    setIsEditingPackage(true);
+    setEditingPackageId(pkg.id);
+    setFormPackageName(pkg.name);
+    setFormPackagePrice(pkg.price);
+    setFormPackageDescription(pkg.description || '');
+    setFormPackageFeaturesText(pkg.features.join('\n'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeletePackage = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus paket ini?')) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      await db.deletePackage(id);
+      setSuccess('Paket berhasil dihapus.');
+      const list = await db.getPackages();
+      setPackagesList(list);
+    } catch (e) {
+      setError('Gagal menghapus paket.');
+    }
+  };
+
+  const resetPackageForm = () => {
+    setIsEditingPackage(false);
+    setEditingPackageId(null);
+    setFormPackageName('');
+    setFormPackagePrice(0);
+    setFormPackageDescription('');
+    setFormPackageFeaturesText('');
+  };
+
   // Filter list logic
   const filteredQuestions = questionsList.filter(q => questionFilter === 'All' || q.category === questionFilter);
 
@@ -379,10 +476,10 @@ export default function AdminDashboard() {
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-6 py-8 w-full space-y-8 flex-1">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 overflow-x-auto scrollbar-none">
           <button
             onClick={() => { setActiveTab('users'); setError(null); setSuccess(null); }}
-            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition-all ${
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition-all shrink-0 ${
               activeTab === 'users'
                 ? 'border-brand-500 text-brand-600 dark:text-brand-400'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -393,7 +490,7 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => { setActiveTab('questions'); setError(null); setSuccess(null); }}
-            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition-all ${
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition-all shrink-0 ${
               activeTab === 'questions'
                 ? 'border-brand-500 text-brand-600 dark:text-brand-400'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -401,6 +498,17 @@ export default function AdminDashboard() {
           >
             <BookOpen className="w-4.5 h-4.5" />
             <span>Bank Soal Manual</span>
+          </button>
+          <button
+            onClick={() => { setActiveTab('packages'); setError(null); setSuccess(null); }}
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition-all shrink-0 ${
+              activeTab === 'packages'
+                ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Award className="w-4.5 h-4.5" />
+            <span>Manajemen Paket</span>
           </button>
         </div>
 
@@ -799,6 +907,172 @@ export default function AdminDashboard() {
                     <span className="text-[10px]">Pilih kategori lain atau tambahkan soal baru menggunakan form di atas.</span>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- TAB 3: PACKAGES PANEL --- */}
+        {activeTab === 'packages' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
+            
+            {/* Left Column: Create/Edit Package form */}
+            <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  {isEditingPackage ? <Edit3 className="w-5 h-5 text-indigo-500" /> : <Plus className="w-5 h-5 text-brand-500" />}
+                  <span>{isEditingPackage ? 'Sunting Paket' : 'Tambah Paket Baru'}</span>
+                </h3>
+                {isEditingPackage && (
+                  <button
+                    onClick={resetPackageForm}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Batal</span>
+                  </button>
+                )}
+              </div>
+
+              <form onSubmit={handleSavePackage} className="space-y-4">
+                <div>
+                  <label htmlFor="packageName" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Nama Paket / Kelas
+                  </label>
+                  <input
+                    id="packageName"
+                    type="text"
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                    placeholder="Contoh: Paket Premium CAT"
+                    value={formPackageName}
+                    onChange={(e) => setFormPackageName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="packagePrice" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Harga Paket (Rupiah)
+                  </label>
+                  <input
+                    id="packagePrice"
+                    type="number"
+                    min={0}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                    placeholder="Contoh: 49000 (0 untuk gratis)"
+                    value={formPackagePrice}
+                    onChange={(e) => setFormPackagePrice(Number(e.target.value))}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="packageDescription" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Deskripsi Ringkas
+                  </label>
+                  <textarea
+                    id="packageDescription"
+                    rows={2}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                    placeholder="Masukkan deskripsi singkat tentang paket..."
+                    value={formPackageDescription}
+                    onChange={(e) => setFormPackageDescription(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="packageFeatures" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Fitur Pendukung (Satu baris per fitur)
+                  </label>
+                  <textarea
+                    id="packageFeatures"
+                    rows={5}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                    placeholder="Akses Penuh Soal&#10;Durasi Ujian 100 Menit&#10;Pembahasan Lengkap"
+                    value={formPackageFeaturesText}
+                    onChange={(e) => setFormPackageFeaturesText(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isEditingPackage ? 'Perbarui Paket' : 'Tambah Paket'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Right Column: Packages Table Grid */}
+            <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/85 rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800/80">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Daftar Paket Kelas</h3>
+                <p className="text-xs text-slate-400 mt-1">Mengatur pilihan paket dan harga yang ditampilkan di landing page.</p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/50 dark:bg-slate-950/20 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-100 dark:border-slate-800/80">
+                      <th className="p-4">Nama Paket</th>
+                      <th className="p-4">Harga</th>
+                      <th className="p-4">Fitur</th>
+                      <th className="p-4 text-right">Tindakan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                    {packagesList.length > 0 ? (
+                      packagesList.map((pkg) => (
+                        <tr key={pkg.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-950/20 transition-colors">
+                          <td className="p-4">
+                            <div className="font-semibold text-slate-900 dark:text-white">{pkg.name}</div>
+                            <div className="text-[10px] text-slate-400 mt-1 max-w-[200px] truncate" title={pkg.description}>
+                              {pkg.description || '-'}
+                            </div>
+                          </td>
+                          <td className="p-4 font-bold text-slate-900 dark:text-white font-mono">
+                            {pkg.price === 0 ? 'Gratis' : `Rp ${pkg.price.toLocaleString('id-ID')}`}
+                          </td>
+                          <td className="p-4">
+                            <ul className="list-disc pl-4 space-y-1 text-slate-500 max-w-[300px]">
+                              {pkg.features.map((feature, fIdx) => (
+                                <li key={fIdx} className="truncate" title={feature}>{feature}</li>
+                              ))}
+                            </ul>
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleEditPackageClick(pkg)}
+                                className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-xl transition-all cursor-pointer"
+                                title="Sunting Paket"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePackage(pkg.id)}
+                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer"
+                                title="Hapus Paket"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="p-8 text-center text-slate-400">
+                          Tidak ada paket terdaftar.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

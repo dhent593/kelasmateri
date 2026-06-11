@@ -28,6 +28,15 @@ export interface Question {
   explanation?: string; // Pembahasan/Review
 }
 
+export interface Package {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  features: string[];
+  created_at: string;
+}
+
 export interface ExamSession {
   id: string;
   user_id: string;
@@ -257,11 +266,57 @@ const DEFAULT_SESSIONS: ExamSession[] = [
   }
 ];
 
+// Seeded packages
+const DEFAULT_PACKAGES: Package[] = [
+  {
+    id: 'pkg-basic',
+    name: 'Paket Basic (Uji Coba)',
+    price: 0,
+    description: 'Sangat cocok untuk pemula yang ingin mencoba sistem CAT CPNS secara gratis.',
+    features: [
+      'Akses 30 Soal Acak (10 TWK, 10 TIU, 10 TKP)',
+      'Durasi Ujian 30 Menit',
+      'Pembahasan Soal Lengkap',
+      'Statistik & Progres Belajar Dasar'
+    ],
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'pkg-premium',
+    name: 'Paket Premium CAT',
+    price: 49000,
+    description: 'Akses penuh ke semua simulasi tryout manual kurasi standar CAT BKN RI.',
+    features: [
+      'Akses Penuh 110 Soal CAT Lengkap',
+      'Durasi Ujian 100 Menit',
+      'Pembahasan Soal Detil & Komprehensif',
+      'Grafik Analisis Progres Belajar',
+      'Sistem Perbandingan Ambang Batas'
+    ],
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'pkg-platinum',
+    name: 'Paket Platinum AI',
+    price: 99000,
+    description: 'Solusi belajar cerdas menggunakan soal kustom tak terbatas dari Gemini AI.',
+    features: [
+      'Semua Fitur Paket Premium CAT',
+      'Akses Simulasi Adaptif Gemini AI',
+      'Penjanaan Soal Tak Terbatas secara Real-time',
+      'Rekomendasi Area Kelemahan Materi',
+      'Prioritas Layanan Dukungan Admin'
+    ],
+    created_at: new Date().toISOString()
+  }
+];
+
 // Server-side process mock DB
 interface MockDbStore {
   users: UserProfile[];
   questions: Question[];
   sessions: ExamSession[];
+  packages: Package[];
 }
 
 declare global {
@@ -272,7 +327,8 @@ if (!global._mockDb) {
   global._mockDb = {
     users: [...DEFAULT_USERS],
     questions: [...SEEDED_QUESTIONS],
-    sessions: [...DEFAULT_SESSIONS]
+    sessions: [...DEFAULT_SESSIONS],
+    packages: [...DEFAULT_PACKAGES]
   };
 }
 
@@ -348,6 +404,10 @@ export const getClientStore = (): MockDbStore => {
   // Server-side: read from file to get the most updated state across bundles
   const fileData = readFromFile();
   if (fileData) {
+    if (!fileData.packages) {
+      fileData.packages = [...DEFAULT_PACKAGES];
+      writeToFile(fileData);
+    }
     global._mockDb = fileData;
     return fileData;
   }
@@ -357,7 +417,8 @@ export const getClientStore = (): MockDbStore => {
     global._mockDb = {
       users: [...DEFAULT_USERS],
       questions: [...SEEDED_QUESTIONS],
-      sessions: [...DEFAULT_SESSIONS]
+      sessions: [...DEFAULT_SESSIONS],
+      packages: [...DEFAULT_PACKAGES]
     };
     writeToFile(global._mockDb);
   }
@@ -373,6 +434,82 @@ export const saveClientStore = (store: MockDbStore) => {
 
 // Unified Database Controller (wraps Supabase or Fallback)
 export const db = {
+  // PACKAGE CRUD
+  getPackages: async (): Promise<Package[]> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('packages').select('*').order('price', { ascending: true });
+      if (!error && data) return data as Package[];
+    }
+    if (isClient) {
+      return await clientFetch('getPackages');
+    }
+    const store = getClientStore();
+    return store.packages || [];
+  },
+
+  createPackage: async (pkg: Omit<Package, 'id' | 'created_at'>): Promise<Package> => {
+    if (isClient) {
+      return await clientFetch('createPackage', 'POST', { package: pkg });
+    }
+
+    const newPackage: Package = {
+      ...pkg,
+      id: `pkg-${Math.random().toString(36).substr(2, 9)}`,
+      created_at: new Date().toISOString()
+    };
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('packages').insert(newPackage).select().single();
+      if (!error && data) return data as Package;
+    }
+
+    const store = getClientStore();
+    if (!store.packages) store.packages = [];
+    store.packages.push(newPackage);
+    saveClientStore(store);
+    return newPackage;
+  },
+
+  updatePackage: async (id: string, updates: Partial<Package>): Promise<Package | null> => {
+    if (isClient) {
+      return await clientFetch('updatePackage', 'POST', { id, updates });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('packages').update(updates).eq('id', id).select().single();
+      if (!error && data) return data as Package;
+    }
+
+    const store = getClientStore();
+    if (!store.packages) store.packages = [];
+    const index = store.packages.findIndex(p => p.id === id);
+    if (index !== -1) {
+      store.packages[index] = { ...store.packages[index], ...updates };
+      saveClientStore(store);
+      return store.packages[index];
+    }
+    return null;
+  },
+
+  deletePackage: async (id: string): Promise<boolean> => {
+    if (isClient) {
+      const res = await clientFetch('deletePackage', 'POST', { id });
+      return !!res?.success;
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('packages').delete().eq('id', id);
+      if (!error) return true;
+    }
+
+    const store = getClientStore();
+    if (!store.packages) store.packages = [];
+    const initialLength = store.packages.length;
+    store.packages = store.packages.filter(p => p.id !== id);
+    saveClientStore(store);
+    return store.packages.length < initialLength;
+  },
+
   // USER CRUD
   getUsers: async (): Promise<UserProfile[]> => {
     if (isSupabaseConfigured && supabase) {

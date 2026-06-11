@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
+import { Package } from '@/lib/db';
 import { 
   Award, 
   ArrowRight, 
@@ -21,6 +22,22 @@ import {
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [packages, setPackages] = useState<Package[]>([]);
+
+  useEffect(() => {
+    async function loadPackages() {
+      try {
+        const res = await fetch('/api/mock-db?action=getPackages');
+        if (res.ok) {
+          const data = await res.json();
+          setPackages(data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load packages:', err);
+      }
+    }
+    loadPackages();
+  }, []);
 
   const stats = [
     { label: 'Peserta Terdaftar', value: '54,200+', icon: Users },
@@ -96,6 +113,7 @@ export default function LandingPage() {
             <a href="#fitur" className="hover:text-brand-500 transition-colors">Fitur</a>
             <a href="#statistik" className="hover:text-brand-500 transition-colors">Statistik</a>
             <a href="#testimoni" className="hover:text-brand-500 transition-colors">Testimoni</a>
+            <a href="#paket" className="hover:text-brand-500 transition-colors">Paket</a>
             <a href="#faq" className="hover:text-brand-500 transition-colors">FAQ</a>
           </nav>
 
@@ -141,6 +159,13 @@ export default function LandingPage() {
               className="block text-sm font-medium hover:text-brand-500"
             >
               Testimoni
+            </a>
+            <a 
+              href="#paket" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm font-medium hover:text-brand-500"
+            >
+              Paket
             </a>
             <a 
               href="#faq" 
@@ -319,6 +344,91 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Paket Section */}
+      <section id="paket" className="py-24 px-6 max-w-7xl mx-auto">
+        <div className="text-center max-w-xl mx-auto space-y-4 mb-20">
+          <span className="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400">Pilihan Belajar</span>
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Pilih Paket Kelas & Simulasi</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            Tingkatkan peluang kelulusan Anda dengan paket belajar terarah dan simulasi terakreditasi kami.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+          {packages.map((pkg) => {
+            const isPremium = pkg.price > 0;
+            const isPopular = pkg.id === 'pkg-premium' || pkg.price === 49000;
+            
+            // Format Price to Rupiah
+            const formattedPrice = pkg.price === 0 ? 'Gratis' : `Rp ${pkg.price.toLocaleString('id-ID')}`;
+            
+            // Prepare WhatsApp link or redirect to register
+            const waLink = `https://wa.me/6289632321244?text=${encodeURIComponent(
+              `Halo Admin KelasMateri, saya ingin mengaktifkan *${pkg.name}* seharga ${formattedPrice} untuk akun saya.`
+            )}`;
+            
+            const btnLink = pkg.price === 0 ? '/register' : waLink;
+
+            return (
+              <div 
+                key={pkg.id} 
+                className={`relative flex flex-col justify-between rounded-3xl p-8 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl ${
+                  isPopular 
+                    ? 'bg-gradient-to-b from-brand-50 to-white dark:from-brand-950/20 dark:to-slate-900 border-2 border-brand-500 shadow-xl dark:shadow-brand-950/10' 
+                    : 'bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                {isPopular && (
+                  <span className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-brand-600 to-accent-500 text-white text-[10px] font-bold tracking-widest uppercase rounded-full shadow-md">
+                    Rekomendasi Utama
+                  </span>
+                )}
+                
+                <div>
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-slate-950 dark:text-white mb-2">{pkg.name}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed min-h-[36px]">
+                      {pkg.description || 'Tidak ada deskripsi tambahan.'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-baseline gap-1 mb-8">
+                    <span className="text-3xl font-black text-slate-950 dark:text-white tracking-tight">{formattedPrice}</span>
+                    {pkg.price > 0 && <span className="text-xs text-slate-400 font-semibold">/ selamanya</span>}
+                  </div>
+
+                  <div className="border-t border-slate-100 dark:border-slate-800/80 pt-6 mb-8">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Fitur Paket:</p>
+                    <ul className="space-y-3">
+                      {pkg.features.map((feature, fIdx) => (
+                        <li key={fIdx} className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+                          <CheckCircle className={`w-4 h-4 shrink-0 mt-0.5 ${isPopular ? 'text-brand-500' : 'text-emerald-500'}`} />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <a 
+                  href={btnLink}
+                  target={pkg.price === 0 ? '_self' : '_blank'}
+                  rel="noopener noreferrer"
+                  className={`w-full py-3.5 rounded-2xl font-bold text-center text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    isPopular 
+                      ? 'bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white shadow-lg shadow-brand-500/20' 
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white'
+                  }`}
+                >
+                  <span>{pkg.price === 0 ? 'Mulai Sekarang' : 'Hubungi Admin untuk Aktivasi'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            );
+          })}
         </div>
       </section>
 

@@ -4,6 +4,7 @@
 DROP TABLE IF EXISTS public.exam_sessions CASCADE;
 DROP TABLE IF EXISTS public.manual_questions CASCADE;
 DROP TABLE IF EXISTS public.users CASCADE;
+DROP TABLE IF EXISTS public.packages CASCADE;
 
 -- Create Enums
 DO $$ 
@@ -64,6 +65,19 @@ CREATE TABLE IF NOT EXISTS public.exam_sessions (
 -- Disable Row Level Security (RLS) to ensure smooth integration with Server Actions
 ALTER TABLE public.exam_sessions DISABLE ROW LEVEL SECURITY;
 
+-- 4. Create Packages Table
+CREATE TABLE IF NOT EXISTS public.packages (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    price INT NOT NULL,
+    description TEXT,
+    features JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of strings e.g. ["Fitur 1", "Fitur 2"]
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Disable Row Level Security (RLS) to ensure smooth integration with Server Actions
+ALTER TABLE public.packages DISABLE ROW LEVEL SECURITY;
+
 -- Create Indexes
 CREATE INDEX IF NOT EXISTS exam_sessions_user_id_idx ON public.exam_sessions(user_id);
 CREATE INDEX IF NOT EXISTS manual_questions_category_idx ON public.manual_questions(category);
@@ -118,4 +132,12 @@ VALUES
  '["A. Ikut berteriak membalas tuduhannya agar warga lain tahu bahwa Anda sudah bekerja keras.", "B. Tetap bersikap tenang, mendengarkan keluhannya dengan empati, meminta maaf atas ketidaknyamanan, dan menjelaskan situasi pelayanan dengan ramah serta menyelesaikannya secepat mungkin.", "C. Meninggalkan loket and memanggil satpam untuk mengusir warga tersebut keluar dari gedung.", "D. Diam saja dan cemberut selama melayani warga tersebut untuk menunjukkan bahwa Anda tersinggung.", "E. Menutup loket pelayanan sementara waktu sampai suasana menjadi kondusif kembali."]'::jsonb, 
  '{"A":1,"B":5,"C":3,"D":2,"E":4}',
  'Pembahasan (Aspek Pelayanan Publik): Opsi B bernilai 5 karena pelayan publik dituntut untuk memiliki kendali diri yang kuat, mendengarkan kritik secara ramah, empati, dan tidak terpancing emosi negatif.')
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed default packages
+INSERT INTO public.packages (id, name, price, description, features)
+VALUES
+('pkg-basic', 'Paket Basic (Uji Coba)', 0, 'Sangat cocok untuk pemula yang ingin mencoba sistem CAT CPNS secara gratis.', '["Akses 30 Soal Acak (10 TWK, 10 TIU, 10 TKP)", "Durasi Ujian 30 Menit", "Pembahasan Soal Lengkap", "Statistik & Progres Belajar Dasar"]'::jsonb),
+('pkg-premium', 'Paket Premium CAT', 49000, 'Akses penuh ke semua simulasi tryout manual kurasi standar CAT BKN RI.', '["Akses Penuh 110 Soal CAT Lengkap", "Durasi Ujian 100 Menit", "Pembahasan Soal Detil & Komprehensif", "Grafik Analisis Progres Belajar", "Sistem Perbandingan Ambang Batas"]'::jsonb),
+('pkg-platinum', 'Paket Platinum AI', 99000, 'Solusi belajar cerdas menggunakan soal kustom tak terbatas dari Gemini AI.', '["Semua Fitur Paket Premium CAT", "Akses Simulasi Adaptif Gemini AI", "Penjanaan Soal Tak Terbatas secara Real-time", "Rekomendasi Area Kelemahan Materi", "Prioritas Layanan Dukungan Admin"]'::jsonb)
 ON CONFLICT (id) DO NOTHING;

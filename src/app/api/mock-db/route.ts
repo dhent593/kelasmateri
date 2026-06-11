@@ -71,6 +71,11 @@ export async function GET(req: Request) {
         return NextResponse.json(pkg);
       }
 
+      case 'getPackages': {
+        const packages = await dbController.getPackages();
+        return NextResponse.json(packages);
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
@@ -145,6 +150,27 @@ export async function POST(req: Request) {
       case 'deleteExamSession': {
         const { id } = body;
         const success = await dbController.deleteExamSession(id);
+        return NextResponse.json({ success });
+      }
+
+      case 'createPackage': {
+        const { package: pkg } = body;
+        const newPkg = await dbController.createPackage(pkg);
+        return NextResponse.json(newPkg);
+      }
+
+      case 'updatePackage': {
+        const { id, updates } = body;
+        const updated = await dbController.updatePackage(id, updates);
+        if (updated) {
+          return NextResponse.json(updated);
+        }
+        return NextResponse.json({ error: 'Package not found' }, { status: 404 });
+      }
+
+      case 'deletePackage': {
+        const { id } = body;
+        const success = await dbController.deletePackage(id);
         return NextResponse.json({ success });
       }
 
