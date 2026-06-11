@@ -294,7 +294,7 @@ function ExamContent() {
         completed_at: new Date().toISOString()
       });
 
-      router.push('/user');
+      router.push(`/exam/review?id=${sessionId}`);
     } catch (e) {
       setError('Gagal mengirimkan lembar jawaban. Coba klik kumpulkan kembali.');
       setLoading(false);
@@ -318,9 +318,9 @@ function ExamContent() {
       });
 
       alert('Waktu ujian Anda telah habis! Jawaban Anda telah otomatis dikumpulkan.');
-      router.push('/user');
+      router.push(`/exam/review?id=${sessionId}`);
     } catch (e) {
-      router.push('/user');
+      router.push(`/exam/review?id=${sessionId}`);
     }
   };
 
