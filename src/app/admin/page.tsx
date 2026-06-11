@@ -366,21 +366,29 @@ export default function AdminDashboard() {
 
     try {
       if (isEditingPackage && editingPackageId) {
-        await db.updatePackage(editingPackageId, {
+        const updated = await db.updatePackage(editingPackageId, {
           name,
           price,
           description: description || undefined,
           features
         });
-        setSuccess('Paket berhasil diperbarui.');
+        if (updated) {
+          setSuccess('Paket berhasil diperbarui.');
+        } else {
+          setError('Gagal memperbarui paket. Silakan buat tabel packages di Supabase SQL Editor terlebih dahulu jika terhubung ke Supabase live.');
+        }
       } else {
-        await db.createPackage({
+        const created = await db.createPackage({
           name,
           price,
           description: description || undefined,
           features
         });
-        setSuccess('Paket baru berhasil ditambahkan.');
+        if (created) {
+          setSuccess('Paket baru berhasil ditambahkan.');
+        } else {
+          setError('Gagal menambahkan paket. Silakan buat tabel packages di Supabase SQL Editor terlebih dahulu jika terhubung ke Supabase live.');
+        }
       }
 
       resetPackageForm();

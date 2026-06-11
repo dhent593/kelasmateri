@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db as dbController } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // This endpoint allows client-side components to query the database (Supabase or fallback local JSON)
 // via server-side execution. This ensures client components can access the database safely.
 
