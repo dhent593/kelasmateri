@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import ThemeToggle from '@/components/ThemeToggle';
 import { 
   Award, 
   ArrowRight, 
@@ -99,6 +100,7 @@ export default function LandingPage() {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
+            <ThemeToggle />
             <Link 
               href="/login" 
               className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-brand-500/10 cursor-pointer"
@@ -147,6 +149,10 @@ export default function LandingPage() {
             >
               FAQ
             </a>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Pilih Mode</span>
+              <ThemeToggle />
+            </div>
             <Link 
               href="/login"
               onClick={() => setMobileMenuOpen(false)}

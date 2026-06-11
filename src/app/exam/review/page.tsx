@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { db, ExamSession, Question } from '@/lib/db';
 import { getServerSession } from '@/lib/auth-actions';
+import ThemeToggle from '@/components/ThemeToggle';
 
 function ReviewContent() {
   const router = useRouter();
@@ -113,7 +114,10 @@ function ReviewContent() {
             <span className="text-base font-bold text-slate-900 dark:text-white">Review Hasil Simulasi</span>
           </div>
         </div>
-        <span className="text-xs uppercase font-extrabold tracking-widest text-slate-400">Tipe Ujian: {session.exam_type}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs uppercase font-extrabold tracking-widest text-slate-400">Tipe Ujian: {session.exam_type}</span>
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* Main Container */}

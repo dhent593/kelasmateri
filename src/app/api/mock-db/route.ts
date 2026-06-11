@@ -66,6 +66,11 @@ export async function GET(req: Request) {
         return NextResponse.json(pkg);
       }
 
+      case 'getTrialTryoutPackage': {
+        const pkg = await dbController.getTrialTryoutPackage();
+        return NextResponse.json(pkg);
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }

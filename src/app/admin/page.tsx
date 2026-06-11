@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { db, UserProfile, Question, UserSession } from '@/lib/db';
 import { getServerSession, logoutAction } from '@/lib/auth-actions';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -363,6 +364,7 @@ export default function AdminDashboard() {
               <span>{usersList.length} Pengguna Terdaftar</span>
             </div>
             
+            <ThemeToggle />
             <button
               onClick={handleLogoutClick}
               className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 text-slate-500 dark:text-slate-400 transition-all cursor-pointer"

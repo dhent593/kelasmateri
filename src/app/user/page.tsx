@@ -19,6 +19,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { db, UserProfile, ExamSession, UserSession } from '@/lib/db';
 import { getServerSession, logoutAction } from '@/lib/auth-actions';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -84,19 +85,24 @@ export default function UserDashboard() {
     setError(null);
 
     try {
-      // 1. Get manual questions from DB and pad to 110 questions matching real CPNS length
-      let examQuestions = await db.getQuestions();
-      
-      // Pad with programmatic 110-question package to guarantee full size
-      const fullPack = await db.getFullTryoutPackage();
-      
-      // Intelligently merge: keep user's manual DB questions at the front, pad up to 110 total questions
-      if (examQuestions.length < 110) {
-        const needed = 110 - examQuestions.length;
-        examQuestions = [...examQuestions, ...fullPack.slice(0, needed)];
-      } else {
-        examQuestions = examQuestions.slice(0, 110);
-      }
+      // 1. Get manual questions from DB and build a 30-question trial package (10 of each category)
+      const dbQuestions = await db.getQuestions();
+      const dbTwk = dbQuestions.filter(q => q.category === 'TWK');
+      const dbTiu = dbQuestions.filter(q => q.category === 'TIU');
+      const dbTkp = dbQuestions.filter(q => q.category === 'TKP');
+
+      // Fetch base trial package (10 of each)
+      const trialPack = await db.getTrialTryoutPackage();
+      const trialTwk = trialPack.filter(q => q.category === 'TWK');
+      const trialTiu = trialPack.filter(q => q.category === 'TIU');
+      const trialTkp = trialPack.filter(q => q.category === 'TKP');
+
+      // Merge and limit to exactly 10 per category
+      const mergedTwk = [...dbTwk, ...trialTwk].slice(0, 10);
+      const mergedTiu = [...dbTiu, ...trialTiu].slice(0, 10);
+      const mergedTkp = [...dbTkp, ...trialTkp].slice(0, 10);
+
+      const examQuestions = [...mergedTwk, ...mergedTiu, ...mergedTkp];
 
       // 2. Create session structure
       const newSession = await db.createExamSession({
@@ -105,9 +111,9 @@ export default function UserDashboard() {
         current_question_index: 0,
         saved_answers: {
           answers: {},
-          questions: examQuestions // Snapshot full 110 questions inside session
+          questions: examQuestions // Snapshot 30 questions inside session
         },
-        remaining_time_seconds: 100 * 60, // 100 minutes (standard CPNS duration)
+        remaining_time_seconds: 30 * 60, // 30 minutes for 30 questions
         status: 'in_progress'
       });
 
@@ -250,6 +256,7 @@ export default function UserDashboard() {
               <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Masa Aktif: Selamanya</div>
             </div>
             
+             <ThemeToggle />
             <button
               onClick={handleLogoutClick}
               className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 text-slate-500 dark:text-slate-400 transition-all cursor-pointer"

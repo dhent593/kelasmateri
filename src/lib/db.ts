@@ -663,6 +663,13 @@ export const db = {
       return await clientFetch('getFullTryoutPackage', 'GET');
     }
     return generate110Questions();
+  },
+
+  getTrialTryoutPackage: async (): Promise<Question[]> => {
+    if (isClient) {
+      return await clientFetch('getTrialTryoutPackage', 'GET');
+    }
+    return generate30Questions();
   }
 };
 
@@ -827,5 +834,13 @@ function generate110Questions(): Question[] {
   }
 
   return list;
+}
+
+function generate30Questions(): Question[] {
+  const fullList = generate110Questions();
+  const twk = fullList.filter(q => q.category === 'TWK').slice(0, 10);
+  const tiu = fullList.filter(q => q.category === 'TIU').slice(0, 10);
+  const tkp = fullList.filter(q => q.category === 'TKP').slice(0, 10);
+  return [...twk, ...tiu, ...tkp];
 }
 

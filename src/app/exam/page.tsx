@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { db, ExamSession, Question } from '@/lib/db';
 import { getServerSession } from '@/lib/auth-actions';
+import ThemeToggle from '@/components/ThemeToggle';
 
 function ExamContent() {
   const router = useRouter();
@@ -329,14 +330,17 @@ function ExamContent() {
           <span>{formatTime(timeLeft)}</span>
         </div>
 
-        {/* Jeda Button */}
-        <button
-          onClick={handlePause}
-          className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-950 text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer"
-        >
-          <Pause className="w-3.5 h-3.5 fill-current text-slate-400" />
-          <span>Jeda & Simpan</span>
-        </button>
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <button
+            onClick={handlePause}
+            className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-950 text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Pause className="w-3.5 h-3.5 fill-current text-slate-400" />
+            <span>Jeda & Simpan</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Workspace */}
