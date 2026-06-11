@@ -18,16 +18,19 @@ import {
   Save,
   X,
   Clock,
-  History
+  History,
+  Key,
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
-import { db, UserProfile, Question, UserSession, Package, ExamSession } from '@/lib/db';
+import { db, UserProfile, Question, UserSession, Package, ExamSession, FAQ } from '@/lib/db';
 import { getServerSession, logoutAction } from '@/lib/auth-actions';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [session, setSession] = useState<UserSession | null>(null);
-  const [activeTab, setActiveTab] = useState<'users' | 'questions' | 'packages'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'questions' | 'packages' | 'faqs'>('users');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -38,6 +41,14 @@ export default function AdminDashboard() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
+  
+  // Admin Change Password State
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<UserProfile | null>(null);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminRetypeNewPassword, setAdminRetypeNewPassword] = useState('');
+  const [adminPasswordSuccess, setAdminPasswordSuccess] = useState<string | null>(null);
+  const [adminPasswordError, setAdminPasswordError] = useState<string | null>(null);
+  const [adminUpdatingPassword, setAdminUpdatingPassword] = useState(false);
   
   // Sessions & Exam History Modal State
   const [sessionsList, setSessionsList] = useState<ExamSession[]>([]);
@@ -76,6 +87,14 @@ export default function AdminDashboard() {
   const [formPackageDescription, setFormPackageDescription] = useState('');
   const [formPackageFeaturesText, setFormPackageFeaturesText] = useState('');
 
+  // FAQ State
+  const [faqsList, setFaqsList] = useState<FAQ[]>([]);
+  const [isEditingFaq, setIsEditingFaq] = useState(false);
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState('');
+  const [faqAnswer, setFaqAnswer] = useState('');
+  const [savingFaq, setSavingFaq] = useState(false);
+
   useEffect(() => {
     fetchSessionAndData();
   }, []);
@@ -102,6 +121,9 @@ export default function AdminDashboard() {
 
       const sessions = await db.getExamSessions();
       setSessionsList(sessions);
+
+      const faqs = await db.getFaqs();
+      setFaqsList(faqs);
     } catch (e: any) {
       setError('Gagal memuat data administrasi.');
     } finally {
@@ -225,6 +247,43 @@ export default function AdminDashboard() {
       setUsersList(users);
     } catch (err: any) {
       setError('Gagal memperbarui paket pengguna.');
+    }
+  };
+
+  const handleAdminChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForPassword) return;
+
+    setAdminPasswordError(null);
+    setAdminPasswordSuccess(null);
+
+    if (adminNewPassword !== adminRetypeNewPassword) {
+      setAdminPasswordError('Konfirmasi password tidak cocok.');
+      return;
+    }
+
+    if (adminNewPassword.length < 6) {
+      setAdminPasswordError('Password baru minimal terdiri dari 6 karakter.');
+      return;
+    }
+
+    setAdminUpdatingPassword(true);
+    try {
+      const updatedUser = await db.updateUser(selectedUserForPassword.id, { password: adminNewPassword });
+      if (updatedUser) {
+        setAdminPasswordSuccess(`Password untuk user ${selectedUserForPassword.email} berhasil diubah.`);
+        setAdminNewPassword('');
+        setAdminRetypeNewPassword('');
+        // Refresh local list
+        const users = await db.getUsers();
+        setUsersList(users);
+      } else {
+        setAdminPasswordError('Gagal mengubah password.');
+      }
+    } catch (err: any) {
+      setAdminPasswordError(err.message || 'Terjadi kesalahan saat mengubah password.');
+    } finally {
+      setAdminUpdatingPassword(false);
     }
   };
 
@@ -475,6 +534,80 @@ export default function AdminDashboard() {
     setFormPackageFeaturesText('');
   };
 
+  // --- FAQ CONTROLLERS ---
+  const handleSaveFaq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setSavingFaq(true);
+
+    try {
+      if (isEditingFaq && editingFaqId) {
+        const updated = await db.updateFaq(editingFaqId, {
+          question: faqQuestion,
+          answer: faqAnswer
+        });
+        if (updated) {
+          setSuccess('FAQ berhasil diperbarui.');
+          resetFaqForm();
+          const faqs = await db.getFaqs();
+          setFaqsList(faqs);
+        } else {
+          setError('Gagal memperbarui FAQ.');
+        }
+      } else {
+        const created = await db.createFaq({
+          question: faqQuestion,
+          answer: faqAnswer
+        });
+        setSuccess('FAQ baru berhasil ditambahkan.');
+        resetFaqForm();
+        const faqs = await db.getFaqs();
+        setFaqsList(faqs);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal menyimpan FAQ.');
+    } finally {
+      setSavingFaq(false);
+    }
+  };
+
+  const handleEditFaqClick = (faq: FAQ) => {
+    setIsEditingFaq(true);
+    setEditingFaqId(faq.id);
+    setFaqQuestion(faq.question);
+    setFaqAnswer(faq.answer);
+  };
+
+  const handleDeleteFaq = async (faqId: string) => {
+    setError(null);
+    setSuccess(null);
+    if (!confirm('Apakah Anda yakin ingin menghapus FAQ ini?')) return;
+
+    try {
+      const ok = await db.deleteFaq(faqId);
+      if (ok) {
+        setSuccess('FAQ berhasil dihapus.');
+        const faqs = await db.getFaqs();
+        setFaqsList(faqs);
+        if (editingFaqId === faqId) {
+          resetFaqForm();
+        }
+      } else {
+        setError('Gagal menghapus FAQ.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Gagal menghapus FAQ.');
+    }
+  };
+
+  const resetFaqForm = () => {
+    setIsEditingFaq(false);
+    setEditingFaqId(null);
+    setFaqQuestion('');
+    setFaqAnswer('');
+  };
+
   // Filter list logic
   const filteredQuestions = questionsList.filter(q => questionFilter === 'All' || q.category === questionFilter);
 
@@ -562,6 +695,17 @@ export default function AdminDashboard() {
           >
             <Award className="w-4.5 h-4.5" />
             <span>Manajemen Paket</span>
+          </button>
+          <button
+            onClick={() => { setActiveTab('faqs'); setError(null); setSuccess(null); }}
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition-all shrink-0 ${
+              activeTab === 'faqs'
+                ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <HelpCircle className="w-4.5 h-4.5" />
+            <span>Manajemen FAQ</span>
           </button>
         </div>
 
@@ -708,6 +852,13 @@ export default function AdminDashboard() {
                           </td>
                           <td className="p-4 text-right">
                             <div className="flex justify-end items-center gap-2">
+                              <button
+                                onClick={() => setSelectedUserForPassword(user)}
+                                className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-xl transition-all cursor-pointer inline-flex"
+                                title="Reset / Ubah Password"
+                              >
+                                <Key className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => setHistoryUser(user)}
                                 className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/20 text-brand-600 dark:text-brand-400 font-bold text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shrink-0"
@@ -1154,6 +1305,142 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* --- TAB 4: FAQ PANEL --- */}
+        {activeTab === 'faqs' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
+            {/* Left Form: Add / Edit FAQ */}
+            <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                {isEditingFaq ? 'Sunting FAQ' : 'Tambah FAQ Baru'}
+              </h3>
+              <p className="text-xs text-slate-400 mb-6">
+                {isEditingFaq ? 'Perbarui informasi konten pertanyaan dan jawaban Anda.' : 'Buat konten tanya jawab baru untuk ditampilkan di halaman depan beranda.'}
+              </p>
+
+              <form onSubmit={handleSaveFaq} className="space-y-4">
+                <div>
+                  <label htmlFor="faq-question" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    Pertanyaan
+                  </label>
+                  <input
+                    id="faq-question"
+                    type="text"
+                    required
+                    placeholder="Contoh: Apakah bisa diakses gratis?"
+                    value={faqQuestion}
+                    onChange={(e) => setFaqQuestion(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-950 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="faq-answer" className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                    Jawaban
+                  </label>
+                  <textarea
+                    id="faq-answer"
+                    required
+                    rows={6}
+                    placeholder="Tuliskan jawaban penjelasan di sini secara detail..."
+                    value={faqAnswer}
+                    onChange={(e) => setFaqAnswer(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-950 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200 resize-none animate-fade-in"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  {isEditingFaq && (
+                    <button
+                      type="button"
+                      onClick={resetFaqForm}
+                      className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 font-semibold text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors"
+                    >
+                      Batal
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={savingFaq}
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold text-xs hover:from-brand-700 hover:to-brand-600 transition-all shadow-md shadow-brand-500/10 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {savingFaq ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isEditingFaq ? 'Simpan' : 'Tambah'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Right: FAQ List Table */}
+            <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Daftar FAQ Platform</h3>
+                  <p className="text-xs text-slate-400 mt-1">Daftar FAQ yang terbit secara dinamis di halaman depan beranda.</p>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  {faqsList.length} Konten
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/50 dark:bg-slate-950/20 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-100 dark:border-slate-800/80">
+                      <th className="p-4 w-1/3">Pertanyaan</th>
+                      <th className="p-4 w-1/2">Jawaban</th>
+                      <th className="p-4 text-right">Tindakan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+                    {faqsList.length > 0 ? (
+                      faqsList.map((faq) => (
+                        <tr key={faq.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-950/20 transition-colors">
+                          <td className="p-4 font-semibold text-slate-900 dark:text-white max-w-[200px] break-words">
+                            {faq.question}
+                          </td>
+                          <td className="p-4 text-slate-500 dark:text-slate-400 max-w-[350px] break-words">
+                            {faq.answer}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex justify-end items-center gap-2">
+                              <button
+                                onClick={() => handleEditFaqClick(faq)}
+                                className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-xl transition-all cursor-pointer"
+                                title="Sunting FAQ"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFaq(faq.id)}
+                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer"
+                                title="Hapus FAQ"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="p-8 text-center text-slate-400">
+                          Tidak ada FAQ terdaftar.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Logout Confirmation Modal */}
@@ -1307,6 +1594,112 @@ export default function AdminDashboard() {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Reset Password Modal */}
+      {selectedUserForPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Key className="w-5 h-5 text-amber-500" />
+                <span>Reset Password</span>
+              </h3>
+              <button 
+                onClick={() => {
+                  setSelectedUserForPassword(null);
+                  setAdminPasswordError(null);
+                  setAdminPasswordSuccess(null);
+                  setAdminNewPassword('');
+                  setAdminRetypeNewPassword('');
+                }}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Pengguna</span>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200/50 dark:border-slate-850/60 break-all">
+                {selectedUserForPassword.email}
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminChangePassword} className="space-y-4">
+              {adminPasswordError && (
+                <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-semibold animate-fade-in">
+                  {adminPasswordError}
+                </div>
+              )}
+              
+              {adminPasswordSuccess && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-xs font-semibold animate-fade-in">
+                  {adminPasswordSuccess}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="admin-new-pass" className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                    Password Baru
+                  </label>
+                  <input
+                    id="admin-new-pass"
+                    type="password"
+                    required
+                    placeholder="Minimal 6 karakter"
+                    value={adminNewPassword}
+                    onChange={(e) => setAdminNewPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-950 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="admin-retype-new-pass" className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                    Ulangi Password Baru
+                  </label>
+                  <input
+                    id="admin-retype-new-pass"
+                    type="password"
+                    required
+                    placeholder="Minimal 6 karakter"
+                    value={adminRetypeNewPassword}
+                    onChange={(e) => setAdminRetypeNewPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 text-slate-950 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedUserForPassword(null);
+                    setAdminPasswordError(null);
+                    setAdminPasswordSuccess(null);
+                    setAdminNewPassword('');
+                    setAdminRetypeNewPassword('');
+                  }}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 font-semibold text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={adminUpdatingPassword}
+                  className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-all shadow-md shadow-amber-500/10 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {adminUpdatingPassword ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <span>Ubah Password</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -143,3 +143,22 @@ VALUES
 ('pkg-premium', 'Paket Premium CAT', 49000, 'Akses penuh ke semua simulasi tryout manual kurasi standar CAT BKN RI.', '["Akses Penuh 110 Soal CAT Lengkap", "Durasi Ujian 100 Menit", "Pembahasan Soal Detil & Komprehensif", "Grafik Analisis Progres Belajar", "Sistem Perbandingan Ambang Batas"]'::jsonb),
 ('pkg-platinum', 'Paket Platinum AI', 99000, 'Solusi belajar cerdas menggunakan soal kustom tak terbatas dari Gemini AI.', '["Semua Fitur Paket Premium CAT", "Akses Simulasi Adaptif Gemini AI", "Penjanaan Soal Tak Terbatas secara Real-time", "Rekomendasi Area Kelemahan Materi", "Prioritas Layanan Dukungan Admin"]'::jsonb)
 ON CONFLICT (id) DO NOTHING;
+
+-- 5. Create FAQs Table
+CREATE TABLE IF NOT EXISTS public.faqs (
+    id TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Disable Row Level Security (RLS) to ensure smooth integration with Server Actions
+ALTER TABLE public.faqs DISABLE ROW LEVEL SECURITY;
+
+-- Seed default FAQs
+INSERT INTO public.faqs (id, question, answer)
+VALUES 
+('faq-1', 'Apakah simulasi KelasMateri sudah mengikuti kisi-kisi PERMENPAN-RB terbaru?', 'Ya, seluruh bank soal kami diperbarui secara berkala mengikuti Permenpan-RB nomor terbaru yang mengatur materi TWK, TIU, dan TKP, termasuk pembobotan nilai TKP berskala 1-5.'),
+('faq-2', 'Bagaimana cara menggunakan fitur Simulasi AI?', 'Fitur Ujian AI memerlukan hak akses khusus dari Admin. Anda dapat meminta aktivasi melalui dashboard Anda setelah melakukan pendaftaran akun.'),
+('faq-3', 'Apakah hasil ujian saya bisa diunduh atau disimpan?', 'Semua hasil pengerjaan, skor per sub-kategori, dan durasi pengerjaan Anda otomatis disimpan ke sistem cloud database sehingga Anda dapat meninjau riwayat belajar Anda kapan saja.')
+ON CONFLICT (id) DO NOTHING;

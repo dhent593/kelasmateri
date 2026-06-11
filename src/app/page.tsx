@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
-import { Package } from '@/lib/db';
+import { Package, FAQ } from '@/lib/db';
 import { 
   Award, 
   ArrowRight, 
@@ -23,20 +23,26 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
 
   useEffect(() => {
-    async function loadPackages() {
+    async function loadData() {
       try {
-        const res = await fetch('/api/mock-db?action=getPackages');
-        if (res.ok) {
-          const data = await res.json();
+        const resPack = await fetch('/api/mock-db?action=getPackages');
+        if (resPack.ok) {
+          const data = await resPack.json();
           setPackages(data || []);
         }
+        const resFaq = await fetch('/api/mock-db?action=getFaqs');
+        if (resFaq.ok) {
+          const data = await resFaq.json();
+          setFaqs(data || []);
+        }
       } catch (err) {
-        console.error('Failed to load packages:', err);
+        console.error('Failed to load landing page data:', err);
       }
     }
-    loadPackages();
+    loadData();
   }, []);
 
   const stats = [
@@ -79,20 +85,7 @@ export default function LandingPage() {
     },
   ];
 
-  const faqs = [
-    {
-      question: 'Apakah simulasi kelasmateri sudah mengikuti kisi-kisi PERMENPAN-RB terbaru?',
-      answer: 'Ya, seluruh bank soal kami diperbarui secara berkala mengikuti Permenpan-RB nomor terbaru yang mengatur materi TWK, TIU, dan TKP, termasuk pembobotan nilai TKP berskala 1-5.'
-    },
-    {
-      question: 'Bagaimana cara menggunakan fitur Simulasi AI?',
-      answer: 'Fitur Ujian AI memerlukan hak akses khusus dari Admin. Anda dapat meminta aktivasi melalui dashboard Anda setelah melakukan pendaftaran akun.'
-    },
-    {
-      question: 'Apakah hasil ujian saya bisa diunduh atau disimpan?',
-      answer: 'Semua hasil pengerjaan, skor per sub-kategori, dan durasi pengerjaan Anda otomatis disimpan ke sistem cloud database sehingga Anda dapat meninjau riwayat belajar Anda kapan saja.'
-    }
-  ];
+
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-[#070b13] text-slate-800 dark:text-slate-200">
@@ -444,21 +437,28 @@ export default function LandingPage() {
             const isOpen = activeFaq === idx;
             return (
               <div 
-                key={idx} 
+                key={faq.id || idx} 
                 className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-200"
               >
                 <button
                   onClick={() => setActiveFaq(isOpen ? null : idx)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left font-semibold text-slate-950 dark:text-white hover:text-brand-500 dark:hover:text-brand-400 cursor-pointer"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left font-semibold text-slate-950 dark:text-white hover:text-brand-500 dark:hover:text-brand-400 cursor-pointer focus:outline-none"
                 >
                   <span className="text-sm">{faq.question}</span>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-brand-500' : 'text-slate-400'}`} />
                 </button>
-                {isOpen && (
+                <div
+                  className="transition-all duration-350 ease-in-out overflow-hidden"
+                  style={{
+                    maxHeight: isOpen ? '500px' : '0px',
+                    opacity: isOpen ? 1 : 0,
+                    transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
                   <div className="px-6 pb-5 border-t border-slate-100 dark:border-slate-800/80 pt-4 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                     {faq.answer}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}

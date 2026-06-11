@@ -29,6 +29,13 @@ export interface Question {
   explanation?: string; // Pembahasan/Review
 }
 
+export interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  created_at: string;
+}
+
 export interface Package {
   id: string;
   name: string;
@@ -313,12 +320,34 @@ const DEFAULT_PACKAGES: Package[] = [
   }
 ];
 
+const DEFAULT_FAQS: FAQ[] = [
+  {
+    id: 'faq-1',
+    question: 'Apakah simulasi KelasMateri sudah mengikuti kisi-kisi PERMENPAN-RB terbaru?',
+    answer: 'Ya, seluruh bank soal kami diperbarui secara berkala mengikuti Permenpan-RB nomor terbaru yang mengatur materi TWK, TIU, dan TKP, termasuk pembobotan nilai TKP berskala 1-5.',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'faq-2',
+    question: 'Bagaimana cara menggunakan fitur Simulasi AI?',
+    answer: 'Fitur Ujian AI memerlukan hak akses khusus dari Admin. Anda dapat meminta aktivasi melalui dashboard Anda setelah melakukan pendaftaran akun.',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'faq-3',
+    question: 'Apakah hasil ujian saya bisa diunduh atau disimpan?',
+    answer: 'Semua hasil pengerjaan, skor per sub-kategori, dan durasi pengerjaan Anda otomatis disimpan ke sistem cloud database sehingga Anda dapat meninjau riwayat belajar Anda kapan saja.',
+    created_at: new Date().toISOString()
+  }
+];
+
 // Server-side process mock DB
 interface MockDbStore {
   users: UserProfile[];
   questions: Question[];
   sessions: ExamSession[];
   packages: Package[];
+  faqs: FAQ[];
 }
 
 declare global {
@@ -330,7 +359,8 @@ if (!global._mockDb) {
     users: [...DEFAULT_USERS],
     questions: [...SEEDED_QUESTIONS],
     sessions: [...DEFAULT_SESSIONS],
-    packages: [...DEFAULT_PACKAGES]
+    packages: [...DEFAULT_PACKAGES],
+    faqs: [...DEFAULT_FAQS]
   };
 }
 
@@ -411,6 +441,10 @@ export const getClientStore = (): MockDbStore => {
       fileData.packages = [...DEFAULT_PACKAGES];
       updated = true;
     }
+    if (!fileData.faqs) {
+      fileData.faqs = [...DEFAULT_FAQS];
+      updated = true;
+    }
     if (fileData.users) {
       fileData.users.forEach(u => {
         if (!u.package_id) {
@@ -440,7 +474,8 @@ export const getClientStore = (): MockDbStore => {
       users: [...DEFAULT_USERS],
       questions: [...SEEDED_QUESTIONS],
       sessions: [...DEFAULT_SESSIONS],
-      packages: [...DEFAULT_PACKAGES]
+      packages: [...DEFAULT_PACKAGES],
+      faqs: [...DEFAULT_FAQS]
     };
     writeToFile(global._mockDb);
   }
@@ -456,6 +491,81 @@ export const saveClientStore = (store: MockDbStore) => {
 
 // Unified Database Controller (wraps Supabase or Fallback)
 export const db = {
+  // FAQ CRUD
+  getFaqs: async (): Promise<FAQ[]> => {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('faqs').select('*').order('created_at', { ascending: true });
+      if (!error && data) return data as FAQ[];
+    }
+    if (isClient) {
+      return await clientFetch('getFaqs');
+    }
+    const store = getClientStore();
+    return store.faqs || [];
+  },
+
+  createFaq: async (faq: Omit<FAQ, 'id' | 'created_at'>): Promise<FAQ> => {
+    if (isClient) {
+      return await clientFetch('createFaq', 'POST', { faq });
+    }
+
+    const newFaq: FAQ = {
+      ...faq,
+      id: `faq-${Math.random().toString(36).substr(2, 9)}`,
+      created_at: new Date().toISOString()
+    };
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('faqs').insert(newFaq).select().single();
+      if (!error && data) return data as FAQ;
+    }
+
+    const store = getClientStore();
+    if (!store.faqs) store.faqs = [];
+    store.faqs.push(newFaq);
+    saveClientStore(store);
+    return newFaq;
+  },
+
+  updateFaq: async (id: string, updates: Partial<FAQ>): Promise<FAQ | null> => {
+    if (isClient) {
+      return await clientFetch('updateFaq', 'POST', { id, updates });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from('faqs').update(updates).eq('id', id).select().single();
+      if (!error && data) return data as FAQ;
+    }
+
+    const store = getClientStore();
+    if (!store.faqs) store.faqs = [];
+    const index = store.faqs.findIndex(f => f.id === id);
+    if (index !== -1) {
+      store.faqs[index] = { ...store.faqs[index], ...updates };
+      saveClientStore(store);
+      return store.faqs[index];
+    }
+    return null;
+  },
+
+  deleteFaq: async (id: string): Promise<boolean> => {
+    if (isClient) {
+      const res = await clientFetch('deleteFaq', 'POST', { id });
+      return !!res?.success;
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('faqs').delete().eq('id', id);
+      if (!error) return true;
+    }
+
+    const store = getClientStore();
+    if (!store.faqs) store.faqs = [];
+    const initialLength = store.faqs.length;
+    store.faqs = store.faqs.filter(f => f.id !== id);
+    saveClientStore(store);
+    return store.faqs.length < initialLength;
+  },
   // PACKAGE CRUD
   getPackages: async (): Promise<Package[]> => {
     if (isSupabaseConfigured && supabase) {

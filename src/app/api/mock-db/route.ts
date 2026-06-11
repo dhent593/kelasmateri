@@ -78,6 +78,11 @@ export async function GET(req: Request) {
         return NextResponse.json(packages);
       }
 
+      case 'getFaqs': {
+        const faqs = await dbController.getFaqs();
+        return NextResponse.json(faqs);
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
@@ -173,6 +178,27 @@ export async function POST(req: Request) {
       case 'deletePackage': {
         const { id } = body;
         const success = await dbController.deletePackage(id);
+        return NextResponse.json({ success });
+      }
+
+      case 'createFaq': {
+        const { faq } = body;
+        const newFaq = await dbController.createFaq(faq);
+        return NextResponse.json(newFaq);
+      }
+
+      case 'updateFaq': {
+        const { id, updates } = body;
+        const updated = await dbController.updateFaq(id, updates);
+        if (updated) {
+          return NextResponse.json(updated);
+        }
+        return NextResponse.json({ error: 'FAQ not found' }, { status: 404 });
+      }
+
+      case 'deleteFaq': {
+        const { id } = body;
+        const success = await dbController.deleteFaq(id);
         return NextResponse.json({ success });
       }
 
