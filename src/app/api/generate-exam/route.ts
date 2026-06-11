@@ -50,6 +50,7 @@ async function generateGeminiBatch(
     1. Pastikan pertanyaan bervariasi, menantang, dan menggunakan kaidah bahasa Indonesia yang baik dan benar.
     2. Pastikan format string opsi persis mengandung 'A. ', 'B. ', 'C. ', 'D. ', 'E. ' di depannya.
     3. Untuk TKP, pastikan semua huruf opsi A, B, C, D, E masing-masing memetakan secara unik ke skor 1, 2, 3, 4, dan 5 secara bervariasi (tidak semuanya A=5, B=4, dll. namun diacak).
+    4. Pastikan tidak ada soal yang terulang atau memiliki skenario/makna yang mirip. Semua butir soal harus benar-benar unik.
   `;
 
   const result = await model.generateContent(prompt);
