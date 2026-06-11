@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.manual_questions (
     question_text TEXT NOT NULL,
     options JSONB NOT NULL, -- Array of strings e.g. ["A. Option 1", "B. Option 2", ...]
     correct_answer TEXT NOT NULL, -- For TIU/TWK: 'A', 'B', etc. For TKP: JSON string/object matching options to scores e.g. {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
+    explanation TEXT, -- Pembahasan
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -79,33 +80,42 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 -- Seed default questions
-INSERT INTO public.manual_questions (id, category, question_text, options, correct_answer)
+INSERT INTO public.manual_questions (id, category, question_text, options, correct_answer, explanation)
 VALUES
 ('q1', 'TWK', 'Menurut UUD 1945 yang telah diamandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan yang berada di bawahnya serta oleh sebuah...', 
  '["A. Komisi Yudisial", "B. Mahkamah Konstitusi", "C. Dewan Perwakilan Rakyat", "D. Badan Pemeriksa Keuangan", "E. Majelis Permusyawaratan Rakyat"]'::jsonb, 
- 'B'),
+ 'B',
+ 'Pembahasan: Berdasarkan UUD 1945 Pasal 24 Ayat (2) hasil amandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan di bawahnya (Peradilan Umum, Agama, Militer, PTUN) serta oleh sebuah Mahkamah Konstitusi (MK).'),
 ('q2', 'TWK', 'Sikap rela berkorban demi kepentingan bangsa dan negara di atas kepentingan pribadi atau golongan merupakan perwujudan dari sila Pancasila yang ke...', 
  '["A. Satu", "B. Dua", "C. Tiga", "D. Empat", "E. Lima"]'::jsonb, 
- 'C'),
+ 'C',
+ 'Pembahasan: Rela berkorban untuk kepentingan negara merupakan salah satu butir pengamalan Pancasila Sila ke-3, yaitu "Persatuan Indonesia". Sila ini menekankan persatuan, kesatuan, serta kepentingan bangsa di atas ego sektoral.'),
 ('q3', 'TWK', 'Sidang pertama BPUPKI yang diselenggarakan pada tanggal 29 Mei - 1 Juni 1945 berfokus membahas tentang...', 
  '["A. Rancangan Undang-Undang Dasar", "B. Bentuk Pemerintahan Negara", "C. Batas Wilayah Negara Indonesia", "D. Rumusan Dasar Negara Indonesia", "E. Pengangkatan Presiden dan Wakil Presiden"]'::jsonb, 
- 'D'),
+ 'D',
+ 'Pembahasan: Sidang pertama BPUPKI berfokus merumuskan Dasar Negara Indonesia Merdeka (yang melahirkan Pancasila pada 1 Juni 1945). Sedangkan rancangan UUD dibahas pada sidang kedua tanggal 10 - 17 Juli 1945.'),
 ('q4', 'TIU', 'Carilah kelanjutan dari deret angka berikut: 3, 6, 12, 21, 33, ...', 
  '["A. 45", "B. 48", "C. 46", "D. 52", "E. 50"]'::jsonb, 
- 'B'),
+ 'B',
+ 'Pembahasan: Pola penambahan angka adalah kelipatan 3 secara berurutan: 3 ke 6 (+3), 6 ke 12 (+6), 12 ke 21 (+9), 21 ke 33 (+12). Maka angka berikutnya ditambah 15, yaitu 33 + 15 = 48.'),
 ('q5', 'TIU', 'APRESIASI : KARYA SENI = ...', 
  '["A. Hukuman : Kejahatan", "B. Penghargaan : Prestasi", "C. Penilaian : Ujian", "D. Investasi : Modal", "E. Konsumsi : Makanan"]'::jsonb, 
- 'B'),
+ 'B',
+ 'Pembahasan: Analogi hubungan fungsi. Apresiasi diberikan atas adanya Karya Seni. Begitu pula Penghargaan diberikan atas adanya Prestasi.'),
 ('q6', 'TIU', 'Semua mahasiswa yang rajin belajar pasti lulus ujian. Sebagian mahasiswa Teknik Sipil tidak lulus ujian. Kesimpulan yang paling tepat adalah...', 
  '["A. Semua mahasiswa Teknik Sipil rajin belajar.", "B. Semua mahasiswa Teknik Sipil tidak rajin belajar.", "C. Sebagian mahasiswa Teknik Sipil rajin belajar.", "D. Sebagian mahasiswa Teknik Sipil tidak rajin belajar.", "E. Semua yang tidak lulus ujian bukan mahasiswa Teknik Sipil."]'::jsonb, 
- 'D'),
+ 'D',
+ 'Pembahasan: Hukum silogisme. Jika semua mahasiswa rajin pasti lulus, dan sebagian mahasiswa Teknik Sipil tidak lulus, maka disimpulkan bahwa sebagian mahasiswa Teknik Sipil tersebut tidak rajin belajar.'),
 ('q7', 'TKP', 'Ketika Anda sedang sibuk menyelesaikan tugas kantor yang sangat penting, tiba-tiba seorang rekan kerja datang meminta bantuan untuk memecahkan masalah sistem komputernya yang mendesak. Sikap Anda adalah...', 
  '["A. Menolaknya secara kasar karena tugas Anda jauh lebih penting dan harus segera selesai.", "B. Menghentikan tugas Anda sepenuhnya dan membantunya hingga selesai tanpa peduli pekerjaan Anda terbengkalai.", "C. Memberitahunya secara sopan bahwa Anda sedang sibuk, lalu menyarankannya untuk meminta bantuan ke bagian IT atau berjanji membantunya setelah tugas Anda selesai.", "D. Mengabaikan permintaannya dan pura-pura tidak mendengar agar dia pergi dengan sendirinya.", "E. Menyuruhnya untuk mengerjakan sendiri karena itu adalah tanggung jawabnya masing-masing."]'::jsonb, 
- '{"A":1,"B":3,"C":5,"D":2,"E":4}'),
+ '{"A":1,"B":3,"C":5,"D":2,"E":4}',
+ 'Pembahasan (Aspek Jejaring Kerja & Profesionalisme): Opsi C bernilai 5 karena mengutamakan keprofesionalan dalam menyelesaikan tugas pribadi yang krusial, sembari menawarkan solusi alternatif yang ramah tanpa mengabaikan rekan kerja.'),
 ('q8', 'TKP', 'Ketika Anda ditunjuk sebagai ketua tim dalam sebuah proyek krusial, salah satu anggota tim Anda menunjukkan penurunan performa kerja yang signifikan dan sering terlambat mengumpulkan tugasnya. Tindakan pertama yang akan Anda lakukan adalah...', 
  '["A. Melaporkan performanya yang buruk kepada atasan agar dia segera diganti.", "B. Memarahinya di depan anggota tim lain agar dia termotivasi untuk bekerja lebih cepat.", "C. Memanggilnya secara pribadi untuk berdiskusi, mendengarkan kendalanya, and mencari solusi bersama demi kelancaran proyek.", "D. Membiarkannya saja dan mengambil alih seluruh pekerjaannya secara sepihak.", "E. Mengabaikan kontribusinya dan tidak melibatkan dirinya lagi dalam rapat-rapat koordinasi."]'::jsonb, 
- '{"A":2,"B":1,"C":5,"D":4,"E":3}'),
+ '{"A":2,"B":1,"C":5,"D":4,"E":3}',
+ 'Pembahasan (Aspek Kemampuan Mengelola Orang Lain): Opsi C bernilai 5 karena langkah bijaksana seorang pemimpin adalah memanggil secara personal untuk mengidentifikasi masalah secara persuasif dan mencari solusi bersama demi tim.'),
 ('q9', 'TKP', 'Anda sedang melayani antrean masyarakat di loket pelayanan publik. Tiba-tiba seorang warga berteriak marah karena merasa terlalu lama menunggu dan menuduh Anda tidak bekerja dengan profesional. Sikap Anda menghadapi situasi ini adalah...', 
- '["A. Ikut berteriak membalas tuduhannya agar warga lain tahu bahwa Anda sudah bekerja keras.", "B. Tetap bersikap tenang, mendengarkan keluhannya dengan empati, meminta maaf atas ketidaknyamanan, dan menjelaskan situasi pelayanan dengan ramah serta menyelesaikannya secepat mungkin.", "C. Meninggalkan loket dan memanggil satpam untuk mengusir warga tersebut keluar dari gedung.", "D. Diam saja dan cemberut selama melayani warga tersebut untuk menunjukkan bahwa Anda tersinggung.", "E. Menutup loket pelayanan sementara waktu sampai suasana menjadi kondusif kembali."]'::jsonb, 
- '{"A":1,"B":5,"C":3,"D":2,"E":4}')
+ '["A. Ikut berteriak membalas tuduhannya agar warga lain tahu bahwa Anda sudah bekerja keras.", "B. Tetap bersikap tenang, mendengarkan keluhannya dengan empati, meminta maaf atas ketidaknyamanan, dan menjelaskan situasi pelayanan dengan ramah serta menyelesaikannya secepat mungkin.", "C. Meninggalkan loket and memanggil satpam untuk mengusir warga tersebut keluar dari gedung.", "D. Diam saja dan cemberut selama melayani warga tersebut untuk menunjukkan bahwa Anda tersinggung.", "E. Menutup loket pelayanan sementara waktu sampai suasana menjadi kondusif kembali."]'::jsonb, 
+ '{"A":1,"B":5,"C":3,"D":2,"E":4}',
+ 'Pembahasan (Aspek Pelayanan Publik): Opsi B bernilai 5 karena pelayan publik dituntut untuk memiliki kendali diri yang kuat, mendengarkan kritik secara ramah, empati, dan tidak terpancing emosi negatif.')
 ON CONFLICT (id) DO NOTHING;

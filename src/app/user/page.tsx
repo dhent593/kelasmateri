@@ -14,7 +14,8 @@ import {
   Sparkles,
   RefreshCw,
   Clock,
-  MessageCircle
+  MessageCircle,
+  Trash2
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { db, UserProfile, ExamSession, UserSession } from '@/lib/db';
@@ -77,6 +78,26 @@ export default function UserDashboard() {
     await logoutAction();
     router.push('/login');
     router.refresh();
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus riwayat simulasi ini? Tindakan ini akan menghapusnya secara permanen.')) {
+      return;
+    }
+    setError(null);
+    try {
+      const success = await db.deleteExamSession(sessionId);
+      if (success) {
+        setSessionsList(prev => prev.filter(s => s.id !== sessionId));
+        if (activeSession?.id === sessionId) {
+          setActiveSession(null);
+        }
+      } else {
+        setError('Gagal menghapus riwayat simulasi.');
+      }
+    } catch (e) {
+      setError('Terjadi kesalahan saat menghapus riwayat.');
+    }
   };
 
   const handleStartManualExam = async () => {
@@ -614,6 +635,14 @@ export default function UserDashboard() {
                           className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-900 text-brand-600 dark:text-brand-400 transition-colors cursor-pointer"
                         >
                           Lihat Pembahasan
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteSession(s.id)}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0"
+                          title="Hapus Riwayat Ujian"
+                        >
+                          <Trash2 className="w-4.5 h-4.5" />
                         </button>
                       </div>
                     </div>

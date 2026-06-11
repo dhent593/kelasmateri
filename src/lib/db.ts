@@ -658,6 +658,24 @@ export const db = {
     return null;
   },
 
+  deleteExamSession: async (id: string): Promise<boolean> => {
+    if (isClient) {
+      const res = await clientFetch('deleteExamSession', 'POST', { id });
+      return !!res?.success;
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('exam_sessions').delete().eq('id', id);
+      if (!error) return true;
+    }
+
+    const store = getClientStore();
+    const initialLength = store.sessions.length;
+    store.sessions = store.sessions.filter(s => s.id !== id);
+    saveClientStore(store);
+    return store.sessions.length < initialLength;
+  },
+
   getFullTryoutPackage: async (): Promise<Question[]> => {
     if (isClient) {
       return await clientFetch('getFullTryoutPackage', 'GET');
@@ -717,7 +735,7 @@ function generate110Questions(): Question[] {
     list.push({
       id: `ai-twk-${i + 1}`,
       category: 'TWK',
-      question_text: `[Soal TWK nomor ${i + 1}] ${template.q}`,
+      question_text: template.q,
       options: [...template.opts],
       correct_answer: template.ans,
       created_at: new Date().toISOString(),
@@ -777,7 +795,7 @@ function generate110Questions(): Question[] {
     list.push({
       id: `ai-tiu-verb-${i + 1}`,
       category: 'TIU',
-      question_text: `[Soal TIU Logika nomor ${i + 21}] ${template.q}`,
+      question_text: template.q,
       options: [...template.opts],
       correct_answer: template.ans,
       created_at: new Date().toISOString(),
@@ -825,7 +843,7 @@ function generate110Questions(): Question[] {
     list.push({
       id: `ai-tkp-${i + 1}`,
       category: 'TKP',
-      question_text: `[Soal TKP nomor ${i + 1}] ${template.q}`,
+      question_text: template.q,
       options: labeledOptions,
       correct_answer: template.ans,
       created_at: new Date().toISOString(),

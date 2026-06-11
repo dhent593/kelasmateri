@@ -142,6 +142,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Session not found' }, { status: 404 });
       }
 
+      case 'deleteExamSession': {
+        const { id } = body;
+        const success = await dbController.deleteExamSession(id);
+        return NextResponse.json({ success });
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
