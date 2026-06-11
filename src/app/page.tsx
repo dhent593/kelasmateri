@@ -387,8 +387,10 @@ export default function LandingPage() {
         className="fixed bottom-6 right-6 z-40 bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 group cursor-pointer"
         title="Hubungi Admin"
       >
-        <MessageCircle className="w-6 h-6 fill-current text-white/90" />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-out whitespace-nowrap text-sm font-bold">
+        <svg className="w-6 h-6 fill-current text-white" viewBox="0 0 24 24">
+          <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.73.44 3.36 1.21 4.79L2 22l5.37-1.3c1.37.74 2.93 1.17 4.63 1.17 5.52 0 10-4.48 10-10S17.52 2 12.004 2zM16.8 15.3c-.2.5-.9.9-1.4 1-1 .2-2.2-.2-3.6-1-1.7-.9-3-2.6-3.8-4-.4-.5-.6-1.1-.6-1.7 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4 0 .5l-.5.6c-.1.2-.2.4-.1.6.4.7.9 1.4 1.5 2 .6.5 1.2.9 1.9 1.2.2.1.4.1.6-.1l.5-.6c.2-.2.4-.2.6-.1l1.7.8c.3.1.4.3.4.5s0 .9-.3 1.2z" />
+        </svg>
+        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-700 ease-in-out whitespace-nowrap text-sm font-bold">
           Hubungi Admin
         </span>
       </a>
