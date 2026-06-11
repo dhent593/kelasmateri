@@ -329,7 +329,7 @@ export default function UserDashboard() {
                 ) : (
                   <>
                     <Play className="w-4 h-4 fill-current text-brand-500" />
-                    <span>Mulai Simulasi Manual</span>
+                    <span>Mulai Simulasi Gratis</span>
                   </>
                 )}
               </button>
@@ -351,7 +351,7 @@ export default function UserDashboard() {
                   ) : (
                     <>
                       <Sparkles className={`w-4 h-4 ${userProfile?.can_generate_exam ? 'text-white' : 'text-slate-400'}`} />
-                      <span>Kerjakan Simulasi AI</span>
+                      <span>Kerjakan Simulasi Premium (AI)</span>
                     </>
                   )}
                 </button>
