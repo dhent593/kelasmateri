@@ -345,7 +345,7 @@ function ExamContent() {
             <Award className="w-4 h-4" />
           </div>
           <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-            kelas<span className="text-brand-600">materi</span>
+            Kelas<span className="text-brand-600">Materi</span>
           </span>
         </div>
 

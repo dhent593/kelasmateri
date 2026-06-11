@@ -500,7 +500,7 @@ export default function AdminDashboard() {
                 <Award className="w-5 h-5" />
               </div>
               <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                kelas<span className="text-brand-600 font-extrabold">materi</span>
+                Kelas<span className="text-brand-600 font-extrabold">Materi</span>
               </span>
             </Link>
             <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400">

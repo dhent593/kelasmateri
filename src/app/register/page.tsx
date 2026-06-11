@@ -63,7 +63,7 @@ export default function RegisterPage() {
             <Award className="w-6 h-6" />
           </div>
           <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-            kelas<span className="text-brand-600 font-extrabold">materi</span>
+            Kelas<span className="text-brand-600 font-extrabold">Materi</span>
           </span>
         </Link>
 

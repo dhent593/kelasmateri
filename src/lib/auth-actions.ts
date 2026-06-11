@@ -119,3 +119,33 @@ export async function logoutAction() {
   await removeSessionCookie();
   return { success: true };
 }
+
+// Change Password Action
+export async function changePasswordAction(userId: string, passwordLama: string, passwordBaru: string, retypePasswordBaru: string) {
+  if (!userId || !passwordLama || !passwordBaru || !retypePasswordBaru) {
+    return { success: false, error: 'Semua kolom password harus diisi.' };
+  }
+  if (passwordBaru !== retypePasswordBaru) {
+    return { success: false, error: 'Konfirmasi password baru tidak cocok.' };
+  }
+  if (passwordBaru.length < 6) {
+    return { success: false, error: 'Password baru minimal terdiri dari 6 karakter.' };
+  }
+
+  try {
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return { success: false, error: 'User tidak ditemukan.' };
+    }
+    const expectedPassword = user.password || 'palamana';
+    if (passwordLama !== expectedPassword) {
+      return { success: false, error: 'Password lama salah.' };
+    }
+
+    // Update password
+    await db.updateUser(userId, { password: passwordBaru });
+    return { success: true, message: 'Password berhasil diubah.' };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Terjadi kesalahan saat mengubah password.' };
+  }
+}
