@@ -7,7 +7,12 @@
       "can_generate_exam": true,
       "created_at": "2026-06-11T07:32:19.035Z",
       "password": "palamana",
-      "package_id": "pkg-platinum"
+      "package_id": "pkg-platinum",
+      "unlocked_packages": [
+        "pkg-basic",
+        "pkg-premium",
+        "pkg-platinum"
+      ]
     },
     {
       "id": "user-uuid",
@@ -16,7 +21,10 @@
       "can_generate_exam": false,
       "created_at": "2026-06-11T07:32:19.035Z",
       "password": "palamana",
-      "package_id": "pkg-basic"
+      "package_id": "pkg-basic",
+      "unlocked_packages": [
+        "pkg-basic"
+      ]
     }
   ],
   "questions": [
@@ -33,7 +41,10 @@
       ],
       "correct_answer": "B",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan: Berdasarkan UUD 1945 Pasal 24 Ayat (2) hasil amandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan di bawahnya (Peradilan Umum, Agama, Militer, PTUN) serta oleh sebuah Mahkamah Konstitusi (MK)."
+      "explanation": "Pembahasan: Berdasarkan UUD 1945 Pasal 24 Ayat (2) hasil amandemen, kekuasaan kehakiman di Indonesia dilakukan oleh sebuah Mahkamah Agung dan badan peradilan di bawahnya (Peradilan Umum, Agama, Militer, PTUN) serta oleh sebuah Mahkamah Konstitusi (MK).",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q2",
@@ -48,7 +59,10 @@
       ],
       "correct_answer": "C",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan: Rela berkorban untuk kepentingan negara merupakan salah satu butir pengamalan Pancasila Sila ke-3, yaitu \"Persatuan Indonesia\". Sila ini menekankan persatuan, kesatuan, serta kepentingan bangsa di atas ego sektoral."
+      "explanation": "Pembahasan: Rela berkorban untuk kepentingan negara merupakan salah satu butir pengamalan Pancasila Sila ke-3, yaitu \"Persatuan Indonesia\". Sila ini menekankan persatuan, kesatuan, serta kepentingan bangsa di atas ego sektoral.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q3",
@@ -63,7 +77,10 @@
       ],
       "correct_answer": "D",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan: Sidang pertama BPUPKI berfokus merumuskan Dasar Negara Indonesia Merdeka (yang melahirkan Pancasila pada 1 Juni 1945). Sedangkan rancangan UUD dibahas pada sidang kedua tanggal 10 - 17 Juli 1945."
+      "explanation": "Pembahasan: Sidang pertama BPUPKI berfokus merumuskan Dasar Negara Indonesia Merdeka (yang melahirkan Pancasila pada 1 Juni 1945). Sedangkan rancangan UUD dibahas pada sidang kedua tanggal 10 - 17 Juli 1945.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q4",
@@ -78,7 +95,10 @@
       ],
       "correct_answer": "B",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan: Pola penambahan angka adalah kelipatan 3 secara berurutan: 3 ke 6 (+3), 6 ke 12 (+6), 12 ke 21 (+9), 21 ke 33 (+12). Maka angka berikutnya ditambah 15, yaitu 33 + 15 = 48."
+      "explanation": "Pembahasan: Pola penambahan angka adalah kelipatan 3 secara berurutan: 3 ke 6 (+3), 6 ke 12 (+6), 12 ke 21 (+9), 21 ke 33 (+12). Maka angka berikutnya ditambah 15, yaitu 33 + 15 = 48.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q5",
@@ -93,7 +113,10 @@
       ],
       "correct_answer": "B",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan: Analogi hubungan fungsi. Apresiasi diberikan atas adanya Karya Seni. Begitu pula Penghargaan diberikan atas adanya Prestasi."
+      "explanation": "Pembahasan: Analogi hubungan fungsi. Apresiasi diberikan atas adanya Karya Seni. Begitu pula Penghargaan diberikan atas adanya Prestasi.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q6",
@@ -108,7 +131,10 @@
       ],
       "correct_answer": "D",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan: Hukum silogisme. Jika semua mahasiswa rajin pasti lulus, dan sebagian mahasiswa Teknik Sipil tidak lulus, maka disimpulkan bahwa sebagian mahasiswa Teknik Sipil tersebut tidak rajin belajar."
+      "explanation": "Pembahasan: Hukum silogisme. Jika semua mahasiswa rajin pasti lulus, dan sebagian mahasiswa Teknik Sipil tidak lulus, maka disimpulkan bahwa sebagian mahasiswa Teknik Sipil tersebut tidak rajin belajar.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q7",
@@ -123,7 +149,10 @@
       ],
       "correct_answer": "{\"A\":1,\"B\":3,\"C\":5,\"D\":2,\"E\":4}",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan (Aspek Jejaring Kerja & Profesionalisme): Opsi C bernilai 5 karena mengutamakan keprofesionalan dalam menyelesaikan tugas pribadi yang krusial, sembari menawarkan solusi alternatif yang ramah tanpa mengabaikan rekan kerja."
+      "explanation": "Pembahasan (Aspek Jejaring Kerja & Profesionalisme): Opsi C bernilai 5 karena mengutamakan keprofesionalan dalam menyelesaikan tugas pribadi yang krusial, sembari menawarkan solusi alternatif yang ramah tanpa mengabaikan rekan kerja.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q8",
@@ -138,7 +167,10 @@
       ],
       "correct_answer": "{\"A\":2,\"B\":1,\"C\":5,\"D\":4,\"E\":3}",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan (Aspek Kemampuan Mengelola Orang Lain): Opsi C bernilai 5 karena langkah bijaksana seorang pemimpin adalah memanggil secara personal untuk mengidentifikasi masalah secara persuasif dan mencari solusi bersama demi tim."
+      "explanation": "Pembahasan (Aspek Kemampuan Mengelola Orang Lain): Opsi C bernilai 5 karena langkah bijaksana seorang pemimpin adalah memanggil secara personal untuk mengidentifikasi masalah secara persuasif dan mencari solusi bersama demi tim.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     },
     {
       "id": "q9",
@@ -153,7 +185,10 @@
       ],
       "correct_answer": "{\"A\":1,\"B\":5,\"C\":3,\"D\":2,\"E\":4}",
       "created_at": "2026-06-11T07:32:19.035Z",
-      "explanation": "Pembahasan (Aspek Pelayanan Publik): Opsi B bernilai 5 karena pelayan publik dituntut untuk memiliki kendali diri yang kuat, mendengarkan kritik secara ramah, empati, dan tidak terpancing emosi negatif."
+      "explanation": "Pembahasan (Aspek Pelayanan Publik): Opsi B bernilai 5 karena pelayan publik dituntut untuk memiliki kendali diri yang kuat, mendengarkan kritik secara ramah, empati, dan tidak terpancing emosi negatif.",
+      "package_ids": [
+        "pkg-basic"
+      ]
     }
   ],
   "sessions": [
@@ -188,7 +223,9 @@
         "Pembahasan Soal Lengkap",
         "Statistik & Progres Belajar Dasar"
       ],
-      "created_at": "2026-06-11T07:32:19.035Z"
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "duration_minutes": 30,
+      "total_questions": 30
     },
     {
       "id": "pkg-premium",
@@ -202,7 +239,9 @@
         "Grafik Analisis Progres Belajar",
         "Sistem Perbandingan Ambang Batas"
       ],
-      "created_at": "2026-06-11T07:32:19.035Z"
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "duration_minutes": 100,
+      "total_questions": 110
     },
     {
       "id": "pkg-platinum",
@@ -216,7 +255,29 @@
         "Rekomendasi Area Kelemahan Materi",
         "Prioritas Layanan Dukungan Admin"
       ],
-      "created_at": "2026-06-11T07:32:19.035Z"
+      "created_at": "2026-06-11T07:32:19.035Z",
+      "duration_minutes": 120,
+      "total_questions": 110
+    }
+  ],
+  "faqs": [
+    {
+      "id": "faq-1",
+      "question": "Apakah simulasi KelasMateri sudah mengikuti kisi-kisi PERMENPAN-RB terbaru?",
+      "answer": "Ya, seluruh bank soal kami diperbarui secara berkala mengikuti Permenpan-RB nomor terbaru yang mengatur materi TWK, TIU, dan TKP, termasuk pembobotan nilai TKP berskala 1-5.",
+      "created_at": "2026-06-12T00:09:01.565Z"
+    },
+    {
+      "id": "faq-2",
+      "question": "Bagaimana cara menggunakan fitur Simulasi AI?",
+      "answer": "Fitur Ujian AI memerlukan hak akses khusus dari Admin. Anda dapat meminta aktivasi melalui dashboard Anda setelah melakukan pendaftaran akun.",
+      "created_at": "2026-06-12T00:09:01.565Z"
+    },
+    {
+      "id": "faq-3",
+      "question": "Apakah hasil ujian saya bisa diunduh atau disimpan?",
+      "answer": "Semua hasil pengerjaan, skor per sub-kategori, dan durasi pengerjaan Anda otomatis disimpan ke sistem cloud database sehingga Anda dapat meninjau riwayat belajar Anda kapan saja.",
+      "created_at": "2026-06-12T00:09:01.565Z"
     }
   ]
 }

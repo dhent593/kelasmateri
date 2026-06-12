@@ -688,7 +688,20 @@ export const db = {
   getUsers: async (): Promise<UserProfile[]> => {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('users').select('*');
-      if (!error && data) return data as UserProfile[];
+      if (!error && data) {
+        return (data as UserProfile[]).map(user => {
+          if (user.unlocked_packages && !user.package_id) {
+            if (user.unlocked_packages.includes('pkg-platinum')) {
+              user.package_id = 'pkg-platinum';
+            } else if (user.unlocked_packages.includes('pkg-premium')) {
+              user.package_id = 'pkg-premium';
+            } else {
+              user.package_id = user.unlocked_packages[0] || 'pkg-basic';
+            }
+          }
+          return user;
+        });
+      }
     }
     if (isClient) {
       return await clientFetch('getUsers');
@@ -700,7 +713,19 @@ export const db = {
   getUserByEmail: async (email: string): Promise<UserProfile | null> => {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
-      if (!error && data) return data as UserProfile;
+      if (!error && data) {
+        const user = data as UserProfile;
+        if (user.unlocked_packages && !user.package_id) {
+          if (user.unlocked_packages.includes('pkg-platinum')) {
+            user.package_id = 'pkg-platinum';
+          } else if (user.unlocked_packages.includes('pkg-premium')) {
+            user.package_id = 'pkg-premium';
+          } else {
+            user.package_id = user.unlocked_packages[0] || 'pkg-basic';
+          }
+        }
+        return user;
+      }
     }
     if (isClient) {
       return await clientFetch('getUserByEmail', 'GET', { email });
@@ -712,7 +737,19 @@ export const db = {
   getUserById: async (id: string): Promise<UserProfile | null> => {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
-      if (!error && data) return data as UserProfile;
+      if (!error && data) {
+        const user = data as UserProfile;
+        if (user.unlocked_packages && !user.package_id) {
+          if (user.unlocked_packages.includes('pkg-platinum')) {
+            user.package_id = 'pkg-platinum';
+          } else if (user.unlocked_packages.includes('pkg-premium')) {
+            user.package_id = 'pkg-premium';
+          } else {
+            user.package_id = user.unlocked_packages[0] || 'pkg-basic';
+          }
+        }
+        return user;
+      }
     }
     if (isClient) {
       return await clientFetch('getUserById', 'GET', { id });
@@ -747,8 +784,12 @@ export const db = {
     };
 
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.from('users').insert(newUser).select().single();
-      if (!error && data) return data as UserProfile;
+      // Omit package_id before inserting to Supabase since it's not a database column
+      const { package_id: omitPkgId, ...supabaseUser } = newUser;
+      const { data, error } = await supabase.from('users').insert(supabaseUser).select().single();
+      if (!error && data) {
+        return { ...data, package_id: newUser.package_id } as UserProfile;
+      }
     }
 
     const store = getClientStore();
@@ -779,8 +820,22 @@ export const db = {
     }
 
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
-      if (!error && data) return data as UserProfile;
+      // Omit package_id before updating in Supabase since it's not a database column
+      const { package_id: omitPkgId, ...supabaseUpdates } = updates;
+      const { data, error } = await supabase.from('users').update(supabaseUpdates).eq('id', id).select().single();
+      if (!error && data) {
+        const user = data as UserProfile;
+        if (user.unlocked_packages && !user.package_id) {
+          if (user.unlocked_packages.includes('pkg-platinum')) {
+            user.package_id = 'pkg-platinum';
+          } else if (user.unlocked_packages.includes('pkg-premium')) {
+            user.package_id = 'pkg-premium';
+          } else {
+            user.package_id = user.unlocked_packages[0] || 'pkg-basic';
+          }
+        }
+        return user;
+      }
     }
 
     const store = getClientStore();
