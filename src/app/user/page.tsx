@@ -21,7 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { db, UserProfile, ExamSession, UserSession } from '@/lib/db';
+import { db, UserProfile, ExamSession, UserSession, Package } from '@/lib/db';
 import { getServerSession, logoutAction, changePasswordAction } from '@/lib/auth-actions';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -31,6 +31,7 @@ export default function UserDashboard() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [sessionsList, setSessionsList] = useState<ExamSession[]>([]);
+  const [packagesList, setPackagesList] = useState<Package[]>([]);
   const [activeSession, setActiveSession] = useState<ExamSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingExam, setGeneratingExam] = useState(false);
@@ -63,6 +64,10 @@ export default function UserDashboard() {
       // Fetch fresh profile details
       const profile = await db.getUserById(activeSessionData.id);
       setUserProfile(profile);
+
+      // Fetch packages
+      const pkgs = await db.getPackages();
+      setPackagesList(pkgs);
 
       if (profile) {
         // Fetch sessions
@@ -150,30 +155,70 @@ export default function UserDashboard() {
     }
   };
 
-  const handleStartManualExam = async () => {
+  const handleStartPackageExam = async (pkg: Package) => {
     if (!userProfile) return;
     setGeneratingExam(true);
     setError(null);
 
     try {
-      // 1. Get manual questions from DB and build a 30-question trial package (10 of each category)
+      // 1. Get manual questions from DB and filter those linked to this package
       const dbQuestions = await db.getQuestions();
-      const dbTwk = dbQuestions.filter(q => q.category === 'TWK');
-      const dbTiu = dbQuestions.filter(q => q.category === 'TIU');
-      const dbTkp = dbQuestions.filter(q => q.category === 'TKP');
+      const pkgQuestions = dbQuestions.filter(q => q.package_ids && q.package_ids.includes(pkg.id));
 
-      // Fetch base trial package (10 of each)
-      const trialPack = await db.getTrialTryoutPackage();
-      const trialTwk = trialPack.filter(q => q.category === 'TWK');
-      const trialTiu = trialPack.filter(q => q.category === 'TIU');
-      const trialTkp = trialPack.filter(q => q.category === 'TKP');
+      let examQuestions: any[] = [];
 
-      // Merge and limit to exactly 10 per category
-      const mergedTwk = [...dbTwk, ...trialTwk].slice(0, 10);
-      const mergedTiu = [...dbTiu, ...trialTiu].slice(0, 10);
-      const mergedTkp = [...dbTkp, ...trialTkp].slice(0, 10);
+      if (pkg.id === 'pkg-basic') {
+        // Fallback for basic package
+        const trialPack = await db.getTrialTryoutPackage();
+        const merged = [...pkgQuestions, ...trialPack];
+        
+        // Ensure unique question IDs
+        const seenIds = new Set();
+        const unique = merged.filter(q => {
+          if (seenIds.has(q.id)) return false;
+          seenIds.add(q.id);
+          return true;
+        });
 
-      const examQuestions = [...mergedTwk, ...mergedTiu, ...mergedTkp];
+        // Split by category
+        const twk = unique.filter(q => q.category === 'TWK');
+        const tiu = unique.filter(q => q.category === 'TIU');
+        const tkp = unique.filter(q => q.category === 'TKP');
+
+        const mergedTwk = twk.slice(0, 10);
+        const mergedTiu = tiu.slice(0, 10);
+        const mergedTkp = tkp.slice(0, 10);
+        examQuestions = [...mergedTwk, ...mergedTiu, ...mergedTkp];
+      } else if (pkg.id === 'pkg-premium') {
+        // Fallback for premium package
+        const fullPack = await db.getFullTryoutPackage();
+        const merged = [...pkgQuestions, ...fullPack];
+
+        const seenIds = new Set();
+        const unique = merged.filter(q => {
+          if (seenIds.has(q.id)) return false;
+          seenIds.add(q.id);
+          return true;
+        });
+
+        const twk = unique.filter(q => q.category === 'TWK');
+        const tiu = unique.filter(q => q.category === 'TIU');
+        const tkp = unique.filter(q => q.category === 'TKP');
+
+        const mergedTwk = twk.slice(0, 30);
+        const mergedTiu = tiu.slice(0, 35);
+        const mergedTkp = tkp.slice(0, 45);
+        examQuestions = [...mergedTwk, ...mergedTiu, ...mergedTkp];
+      } else {
+        // For custom package or Platinum manual exam
+        if (pkgQuestions.length === 0) {
+          // Fallback to basic tryout questions to prevent crash
+          const trialPack = await db.getTrialTryoutPackage();
+          examQuestions = trialPack.slice(0, pkg.total_questions);
+        } else {
+          examQuestions = pkgQuestions.slice(0, pkg.total_questions);
+        }
+      }
 
       // 2. Create session structure
       const newSession = await db.createExamSession({
@@ -182,9 +227,9 @@ export default function UserDashboard() {
         current_question_index: 0,
         saved_answers: {
           answers: {},
-          questions: examQuestions // Snapshot 30 questions inside session
+          questions: examQuestions
         },
-        remaining_time_seconds: 30 * 60, // 30 minutes for 30 questions
+        remaining_time_seconds: pkg.duration_minutes * 60,
         status: 'in_progress'
       });
 
@@ -456,146 +501,159 @@ export default function UserDashboard() {
         </section>
 
         {/* 2. Exam Control Panel Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* Start CPNS Exam Box */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          {packagesList.map((pkg) => {
+            const isUnlocked = userProfile?.unlocked_packages?.includes(pkg.id);
+            const isPlatinum = pkg.id === 'pkg-platinum';
             
-            <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Simulasi Tryout CAT CPNS</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
-                Pilih metode latihan Anda. Manual menggunakan bank soal terkurasi dari database kami, sedangkan AI menghasilkan simulasi adaptif menggunakan kecerdasan buatan.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-              {/* Manual Button */}
-              <button
-                onClick={handleStartManualExam}
-                disabled={generatingExam}
-                className="py-4 px-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-brand-500/40 hover:bg-slate-50 dark:hover:bg-slate-950/40 text-slate-900 dark:text-white font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            return (
+              <div 
+                key={pkg.id} 
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between shadow-sm relative overflow-hidden"
               >
-                {generatingExam ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 fill-current text-brand-500" />
-                    <span>Mulai Simulasi Gratis</span>
-                  </>
-                )}
-              </button>
-
-              {/* AI Button with access locks */}
-              <div className="relative group">
-                <button
-                  onClick={handleStartAiExam}
-                  disabled={generatingExam || !userProfile?.can_generate_exam}
-                  className={`w-full py-4 px-6 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer
-                    ${userProfile?.can_generate_exam 
-                      ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white hover:from-brand-700 hover:to-brand-600 shadow-md shadow-brand-500/10' 
-                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200/50 dark:border-slate-800'
-                    }
-                  `}
-                >
-                  {generatingExam ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles className={`w-4 h-4 ${userProfile?.can_generate_exam ? 'text-white' : 'text-slate-400'}`} />
-                      <span>Kerjakan Simulasi Premium (AI)</span>
-                    </>
-                  )}
-                </button>
+                {/* Background glow effects */}
+                <div className={`absolute top-0 right-0 w-[200px] h-[200px] rounded-full blur-3xl pointer-events-none ${
+                  isPlatinum 
+                    ? 'bg-purple-500/5' 
+                    : pkg.id === 'pkg-premium' 
+                      ? 'bg-brand-500/5' 
+                      : 'bg-slate-500/5'
+                }`} />
                 
-                {/* Tooltip Locked */}
-                {!userProfile?.can_generate_exam && (
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-[11px] py-2 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 text-center font-semibold border border-slate-800 z-10">
-                    Akses dikunci oleh Admin. Hubungi Admin via WhatsApp untuk mengaktifkan.
+                {/* Overlay Locked */}
+                {!isUnlocked && (
+                  <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 space-y-4">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center">
+                      <ShieldAlert className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-white text-base">Akses Terkunci</h4>
+                      <p className="text-xs text-slate-300 font-semibold">{pkg.name}</p>
+                      <p className="text-[11px] text-slate-400 max-w-[240px] leading-relaxed">
+                        Aktifkan paket seharga <span className="font-bold text-brand-400">Rp {pkg.price.toLocaleString('id-ID')}</span> untuk membuka akses simulasi ini.
+                      </p>
+                    </div>
+                    <a
+                      href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin mengaktifkan akses ${pkg.name} untuk akun saya: ${userProfile?.email || ''}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 cursor-pointer"
+                    >
+                      <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
+                        <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.73.44 3.36 1.21 4.79L2 22l5.37-1.3c1.37.74 2.93 1.17 4.63 1.17 5.52 0 10-4.48 10-10S17.52 2 12.004 2zM16.8 15.3c-.2.5-.9.9-1.4 1-1 .2-2.2-.2-3.6-1-1.7-.9-3-2.6-3.8-4-.4-.5-.6-1.1-.6-1.7 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4 0 .5l-.5.6c-.1.2-.2.4-.1.6.4.7.9 1.4 1.5 2 .6.5 1.2.9 1.9 1.2.2.1.4.1.6-.1l.5-.6c.2-.2.4-.2.6-.1l1.7.8c.3.1.4.3.4.5s0 .9-.3 1.2z" />
+                      </svg>
+                      <span>Aktivasi via WhatsApp</span>
+                    </a>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {!userProfile?.can_generate_exam && (
-              <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-900/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs animate-fade-in">
-                <div className="text-amber-800 dark:text-amber-400 font-medium text-center sm:text-left leading-relaxed">
-                  Modul Simulasi AI masih terkunci. Hubungi Admin via WhatsApp untuk mengaktifkan akses Anda.
-                </div>
-                <a
-                  href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin meminta aktivasi akses Simulasi AI untuk akun saya: ${userProfile?.email || ''}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shrink-0 transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/10 cursor-pointer"
-                >
-                  <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
-                    <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.73.44 3.36 1.21 4.79L2 22l5.37-1.3c1.37.74 2.93 1.17 4.63 1.17 5.52 0 10-4.48 10-10S17.52 2 12.004 2zM16.8 15.3c-.2.5-.9.9-1.4 1-1 .2-2.2-.2-3.6-1-1.7-.9-3-2.6-3.8-4-.4-.5-.6-1.1-.6-1.7 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4 0 .5l-.5.6c-.1.2-.2.4-.1.6.4.7.9 1.4 1.5 2 .6.5 1.2.9 1.9 1.2.2.1.4.1.6-.1l.5-.6c.2-.2.4-.2.6-.1l1.7.8c.3.1.4.3.4.5s0 .9-.3 1.2z" />
-                  </svg>
-                  <span>Hubungi Admin</span>
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Start TOEFL Exam Box */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-            
-            {/* Overlay Locked */}
-            {userProfile?.package_id !== 'pkg-platinum' && (
-              <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
-                  <ShieldAlert className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-white text-lg">Modul TOEFL AI Terkunci</h4>
-                  <p className="text-xs text-slate-400 max-w-[280px]">
-                    Simulasi TOEFL Inggris dinamis memerlukan aktivasi Paket Platinum. Hubungi Admin via WhatsApp.
+                
+                <div className="space-y-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                    isPlatinum 
+                      ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' 
+                      : pkg.id === 'pkg-premium' 
+                        ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                  }`}>
+                    {isPlatinum ? (
+                      <Sparkles className="w-6 h-6" />
+                    ) : pkg.id === 'pkg-premium' ? (
+                      <Award className="w-6 h-6" />
+                    ) : (
+                      <BookOpen className="w-6 h-6" />
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">{pkg.name}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        {pkg.duration_minutes} Menit
+                      </span>
+                      <span className="text-slate-350 dark:text-slate-700">•</span>
+                      <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        {pkg.total_questions} Soal
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed min-h-[48px]">
+                    {pkg.description || 'Simulasi Tryout dengan bank soal pilihan.'}
                   </p>
+                  
+                  {/* Features List */}
+                  <ul className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-850">
+                    {pkg.features?.map((feat, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-slate-500 dark:text-slate-400 text-xs">
+                        <span className="text-brand-500 font-bold mt-0.5">•</span>
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <a
-                  href={`https://wa.me/6289632321244?text=${encodeURIComponent(`Halo Admin KelasMateri, saya ingin mengaktifkan modul TOEFL AI (Paket Platinum) untuk akun saya: ${userProfile?.email || ''}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 cursor-pointer"
-                >
-                  <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
-                    <path d="M12.004 2C6.48 2 2 6.48 2 12.004c0 1.73.44 3.36 1.21 4.79L2 22l5.37-1.3c1.37.74 2.93 1.17 4.63 1.17 5.52 0 10-4.48 10-10S17.52 2 12.004 2zM16.8 15.3c-.2.5-.9.9-1.4 1-1 .2-2.2-.2-3.6-1-1.7-.9-3-2.6-3.8-4-.4-.5-.6-1.1-.6-1.7 0-1.1.6-1.6.8-1.9.2-.2.4-.3.6-.3h.4c.2 0 .4.1.5.4l.7 1.6c.1.2.1.4 0 .5l-.5.6c-.1.2-.2.4-.1.6.4.7.9 1.4 1.5 2 .6.5 1.2.9 1.9 1.2.2.1.4.1.6-.1l.5-.6c.2-.2.4-.2.6-.1l1.7.8c.3.1.4.3.4.5s0 .9-.3 1.2z" />
-                  </svg>
-                  <span>Hubungi Admin untuk Aktivasi</span>
-                </a>
+                
+                <div className="mt-6 space-y-3">
+                  {/* Primary Tryout Button */}
+                  <button
+                    onClick={() => handleStartPackageExam(pkg)}
+                    disabled={generatingExam || generatingToefl}
+                    className={`w-full py-3 px-4 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer
+                      ${isPlatinum 
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-750 hover:to-purple-650' 
+                        : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-750'
+                      }
+                    `}
+                  >
+                    {generatingExam ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Mulai Ujian Manual</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Additional buttons for Platinum */}
+                  {isPlatinum && (
+                    <div className="grid grid-cols-1 gap-2 pt-2 border-t border-slate-100 dark:border-slate-850">
+                      <button
+                        onClick={handleStartAiExam}
+                        disabled={generatingExam || generatingToefl}
+                        className="w-full py-2.5 px-4 rounded-xl border border-purple-500/30 dark:border-purple-500/20 bg-purple-500/5 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {generatingExam ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                            <span>Mulai Simulasi AI CPNS</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={handleStartToeflExam}
+                        disabled={generatingExam || generatingToefl}
+                        className="w-full py-2.5 px-4 rounded-xl border border-indigo-500/30 dark:border-indigo-500/20 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {generatingToefl ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <Languages className="w-3.5 h-3.5 text-indigo-500" />
+                            <span>Mulai Simulasi TOEFL AI</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            
-            <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Languages className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Simulasi TOEFL Inggris (AI)</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
-                Uji kemampuan bahasa Inggris Anda dengan simulasi TOEFL PBT. Soal terbagi atas Listening, Structure, dan Reading yang dijana secara cerdas oleh AI.
-              </p>
-            </div>
-
-            <div className="mt-8 flex gap-4 items-center">
-              <button
-                onClick={handleStartToeflExam}
-                disabled={generatingToefl || userProfile?.package_id !== 'pkg-platinum'}
-                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-700 hover:to-indigo-600 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-500/10"
-              >
-                {generatingToefl ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-white" />
-                    <span>Kerjakan Simulasi TOEFL AI</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+            );
+          })}
         </section>
 
         {/* 2. Recharts Line Chart */}
@@ -891,17 +949,25 @@ export default function UserDashboard() {
                 <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Email</span>
                 <span className="font-bold text-slate-900 dark:text-white">{userProfile?.email}</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Status Akun</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                  userProfile?.package_id === 'pkg-platinum' 
-                    ? 'bg-purple-100 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400'
-                    : userProfile?.package_id === 'pkg-premium'
-                      ? 'bg-brand-100 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400'
-                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                }`}>
-                  {getPackageName(userProfile?.package_id)}
-                </span>
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] mb-1">Paket Aktif</span>
+                <div className="flex flex-wrap gap-1.5 justify-end">
+                  {userProfile?.unlocked_packages && userProfile.unlocked_packages.length > 0 ? (
+                    userProfile.unlocked_packages.map(pkgId => (
+                      <span key={pkgId} className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        pkgId === 'pkg-platinum' 
+                          ? 'bg-purple-100 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400'
+                          : pkgId === 'pkg-premium'
+                            ? 'bg-brand-100 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {getPackageName(pkgId)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 text-xs">Tidak ada paket</span>
+                  )}
+                </div>
               </div>
             </div>
 

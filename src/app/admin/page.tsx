@@ -63,6 +63,7 @@ export default function AdminDashboard() {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [formCategory, setFormCategory] = useState<'TIU' | 'TWK' | 'TKP' | 'Listening' | 'Structure' | 'Reading'>('TWK');
   const [formQuestionText, setFormQuestionText] = useState('');
+  const [formQuestionPackages, setFormQuestionPackages] = useState<string[]>(['pkg-basic']);
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
   const [optionC, setOptionC] = useState('');
@@ -86,6 +87,8 @@ export default function AdminDashboard() {
   const [formPackagePrice, setFormPackagePrice] = useState(0);
   const [formPackageDescription, setFormPackageDescription] = useState('');
   const [formPackageFeaturesText, setFormPackageFeaturesText] = useState('');
+  const [formPackageDuration, setFormPackageDuration] = useState(30);
+  const [formPackageTotalQuestions, setFormPackageTotalQuestions] = useState(30);
 
   // FAQ State
   const [faqsList, setFaqsList] = useState<FAQ[]>([]);
@@ -236,12 +239,21 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdateUserPackage = async (userId: string, newPackageId: string) => {
+  const handleToggleUserPackage = async (user: UserProfile, packageId: string) => {
     setError(null);
     setSuccess(null);
+    const currentUnlocked = user.unlocked_packages || (user.package_id ? [user.package_id] : ['pkg-basic']);
+    
+    let updatedUnlocked: string[];
+    if (currentUnlocked.includes(packageId)) {
+      updatedUnlocked = currentUnlocked.filter(id => id !== packageId);
+    } else {
+      updatedUnlocked = [...currentUnlocked, packageId];
+    }
+    
     try {
-      await db.updateUser(userId, { package_id: newPackageId });
-      setSuccess('Paket pengguna berhasil diperbarui.');
+      await db.updateUser(user.id, { unlocked_packages: updatedUnlocked });
+      setSuccess(`Akses paket untuk user ${user.email} berhasil diperbarui.`);
       // Refresh list
       const users = await db.getUsers();
       setUsersList(users);
@@ -347,7 +359,8 @@ export default function AdminDashboard() {
           question_text: formQuestionText,
           options: optionsArray,
           correct_answer: correctAnswerString,
-          explanation: formExplanation.trim() || undefined
+          explanation: formExplanation.trim() || undefined,
+          package_ids: formQuestionPackages
         });
         setSuccess('Soal berhasil diperbarui.');
       } else {
@@ -356,7 +369,8 @@ export default function AdminDashboard() {
           question_text: formQuestionText,
           options: optionsArray,
           correct_answer: correctAnswerString,
-          explanation: formExplanation.trim() || undefined
+          explanation: formExplanation.trim() || undefined,
+          package_ids: formQuestionPackages
         });
         setSuccess('Soal baru berhasil disimpan ke database.');
       }
@@ -374,6 +388,7 @@ export default function AdminDashboard() {
     setEditingQuestionId(q.id);
     setFormCategory(q.category);
     setFormQuestionText(q.question_text);
+    setFormQuestionPackages(q.package_ids || ['pkg-basic']);
     
     // Parse choices (Strip "A. ", "B. ", etc)
     const getCleanOption = (idx: number) => {
@@ -427,6 +442,7 @@ export default function AdminDashboard() {
     setIsEditingQuestion(false);
     setEditingQuestionId(null);
     setFormQuestionText('');
+    setFormQuestionPackages(['pkg-basic']);
     setOptionA('');
     setOptionB('');
     setOptionC('');
@@ -472,7 +488,9 @@ export default function AdminDashboard() {
           name,
           price,
           description: description || undefined,
-          features
+          features,
+          duration_minutes: formPackageDuration,
+          total_questions: formPackageTotalQuestions
         });
         if (updated) {
           setSuccess('Paket berhasil diperbarui.');
@@ -484,7 +502,9 @@ export default function AdminDashboard() {
           name,
           price,
           description: description || undefined,
-          features
+          features,
+          duration_minutes: formPackageDuration,
+          total_questions: formPackageTotalQuestions
         });
         if (created) {
           setSuccess('Paket baru berhasil ditambahkan.');
@@ -508,6 +528,8 @@ export default function AdminDashboard() {
     setFormPackagePrice(pkg.price);
     setFormPackageDescription(pkg.description || '');
     setFormPackageFeaturesText(pkg.features.join('\n'));
+    setFormPackageDuration(pkg.duration_minutes || 30);
+    setFormPackageTotalQuestions(pkg.total_questions || 30);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -532,6 +554,8 @@ export default function AdminDashboard() {
     setFormPackagePrice(0);
     setFormPackageDescription('');
     setFormPackageFeaturesText('');
+    setFormPackageDuration(30);
+    setFormPackageTotalQuestions(30);
   };
 
   // --- FAQ CONTROLLERS ---
@@ -832,20 +856,24 @@ export default function AdminDashboard() {
                             </button>
                           </td>
                           <td className="p-4">
-                            <select
-                              value={user.package_id || 'pkg-basic'}
-                              onChange={(e) => handleUpdateUserPackage(user.id, e.target.value)}
-                              className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs font-semibold focus:outline-none focus:border-brand-500 cursor-pointer"
-                            >
-                              {!packagesList.some(p => p.id === 'pkg-basic') && <option value="pkg-basic">Gratis (Basic)</option>}
-                              {!packagesList.some(p => p.id === 'pkg-premium') && <option value="pkg-premium">Premium CPNS</option>}
-                              {!packagesList.some(p => p.id === 'pkg-platinum') && <option value="pkg-platinum">Platinum (TOEFL + AI)</option>}
-                              {packagesList.map((pkg) => (
-                                <option key={pkg.id} value={pkg.id}>
-                                  {pkg.name}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="flex flex-wrap gap-2.5 max-w-[250px]">
+                              {packagesList.map((pkg) => {
+                                const isChecked = user.unlocked_packages?.includes(pkg.id) || (user.package_id === pkg.id);
+                                return (
+                                  <label key={pkg.id} className="flex items-center gap-1 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => handleToggleUserPackage(user, pkg.id)}
+                                      className="rounded text-brand-600 focus:ring-brand-500/20 w-3.5 h-3.5"
+                                    />
+                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400" title={pkg.name}>
+                                      {pkg.name.replace('Paket ', '')}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
                           </td>
                           <td className="p-4 text-center font-bold text-slate-900 dark:text-white font-mono">
                             {examsCount} Ujian
@@ -955,6 +983,32 @@ export default function AdminDashboard() {
                       <span>Untuk soal TKP, setiap pilihan jawaban memiliki bobot nilai terpisah (1 hingga 5). Konfigurasikan pembobotan nilai di bawah ini.</span>
                     </div>
                   )}
+                </div>
+
+                {/* Question Packages Checklist */}
+                <div>
+                  <span className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Tautkan ke Paket Soal
+                  </span>
+                  <div className="flex flex-wrap gap-4 p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    {packagesList.map(pkg => (
+                      <label key={pkg.id} className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold select-none">
+                        <input
+                          type="checkbox"
+                          checked={formQuestionPackages.includes(pkg.id)}
+                          onChange={() => {
+                            if (formQuestionPackages.includes(pkg.id)) {
+                              setFormQuestionPackages(formQuestionPackages.filter(id => id !== pkg.id));
+                            } else {
+                              setFormQuestionPackages([...formQuestionPackages, pkg.id]);
+                            }
+                          }}
+                          className="rounded text-brand-600 focus:ring-brand-500/20 w-4 h-4"
+                        />
+                        <span>{pkg.name}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Question Text */}
@@ -1095,6 +1149,18 @@ export default function AdminDashboard() {
                           <span className="text-[10px] text-slate-400 font-semibold font-mono">
                             Kunci: {q.category === 'TKP' ? 'Skala TKP' : q.correct_answer}
                           </span>
+
+                          {/* Package associations */}
+                          <div className="flex flex-wrap gap-1">
+                            {q.package_ids?.map(pkgId => {
+                              const pkg = packagesList.find(p => p.id === pkgId);
+                              return (
+                                <span key={pkgId} className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700/60">
+                                  {pkg ? pkg.name.replace('Paket ', '') : pkgId}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         <p className="text-sm text-slate-900 dark:text-white leading-relaxed font-medium">
@@ -1194,6 +1260,40 @@ export default function AdminDashboard() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="packageDuration" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      Durasi Ujian (Menit)
+                    </label>
+                    <input
+                      id="packageDuration"
+                      type="number"
+                      min={1}
+                      required
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                      placeholder="Contoh: 30"
+                      value={formPackageDuration}
+                      onChange={(e) => setFormPackageDuration(Number(e.target.value))}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="packageTotalQuestions" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      Jumlah Soal
+                    </label>
+                    <input
+                      id="packageTotalQuestions"
+                      type="number"
+                      min={1}
+                      required
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+                      placeholder="Contoh: 30"
+                      value={formPackageTotalQuestions}
+                      onChange={(e) => setFormPackageTotalQuestions(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="packageDescription" className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                     Deskripsi Ringkas
@@ -1260,6 +1360,11 @@ export default function AdminDashboard() {
                             <div className="font-semibold text-slate-900 dark:text-white">{pkg.name}</div>
                             <div className="text-[10px] text-slate-400 mt-1 max-w-[200px] truncate" title={pkg.description}>
                               {pkg.description || '-'}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold text-brand-600 dark:text-brand-400 mt-1 uppercase tracking-wider">
+                              <span>Durasi: {pkg.duration_minutes || 30} M</span>
+                              <span>•</span>
+                              <span>Soal: {pkg.total_questions || 30}</span>
                             </div>
                           </td>
                           <td className="p-4 font-bold text-slate-900 dark:text-white font-mono">

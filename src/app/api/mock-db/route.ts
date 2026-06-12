@@ -98,8 +98,8 @@ export async function POST(req: Request) {
 
     switch (action) {
       case 'createUser': {
-        const { email, role, id, password } = body;
-        const newUser = await dbController.createUser(email, role, id, password);
+        const { email, role, id, password, package_id, unlocked_packages } = body;
+        const newUser = await dbController.createUser(email, role, id, password, package_id, unlocked_packages);
         return NextResponse.json(newUser);
       }
 

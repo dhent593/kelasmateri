@@ -15,6 +15,7 @@ export interface UserProfile {
   role: 'admin' | 'user';
   can_generate_exam: boolean;
   package_id?: string;
+  unlocked_packages?: string[];
   created_at: string;
   password?: string; // Password stored for admin provisioned accounts
 }
@@ -27,6 +28,7 @@ export interface Question {
   correct_answer: string; // TIU/TWK: 'A', 'B', etc. TKP: '{"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}'
   created_at: string;
   explanation?: string; // Pembahasan/Review
+  package_ids?: string[];
 }
 
 export interface FAQ {
@@ -43,6 +45,8 @@ export interface Package {
   description?: string;
   features: string[];
   created_at: string;
+  duration_minutes: number;
+  total_questions: number;
 }
 
 export interface ExamSession {
@@ -216,6 +220,7 @@ const DEFAULT_USERS: UserProfile[] = [
     role: 'admin',
     can_generate_exam: true,
     package_id: 'pkg-platinum',
+    unlocked_packages: ['pkg-basic', 'pkg-premium', 'pkg-platinum'],
     created_at: new Date().toISOString(),
     password: 'palamana'
   },
@@ -225,6 +230,7 @@ const DEFAULT_USERS: UserProfile[] = [
     role: 'user',
     can_generate_exam: false,
     package_id: 'pkg-basic',
+    unlocked_packages: ['pkg-basic'],
     created_at: new Date().toISOString(),
     password: 'palamana'
   }
@@ -288,7 +294,9 @@ const DEFAULT_PACKAGES: Package[] = [
       'Pembahasan Soal Lengkap',
       'Statistik & Progres Belajar Dasar'
     ],
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    duration_minutes: 30,
+    total_questions: 30
   },
   {
     id: 'pkg-premium',
@@ -302,7 +310,9 @@ const DEFAULT_PACKAGES: Package[] = [
       'Grafik Analisis Progres Belajar',
       'Sistem Perbandingan Ambang Batas'
     ],
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    duration_minutes: 100,
+    total_questions: 110
   },
   {
     id: 'pkg-platinum',
@@ -316,7 +326,9 @@ const DEFAULT_PACKAGES: Package[] = [
       'Rekomendasi Area Kelemahan Materi',
       'Prioritas Layanan Dukungan Admin'
     ],
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    duration_minutes: 120,
+    total_questions: 110
   }
 ];
 
@@ -440,6 +452,17 @@ export const getClientStore = (): MockDbStore => {
     if (!fileData.packages) {
       fileData.packages = [...DEFAULT_PACKAGES];
       updated = true;
+    } else {
+      fileData.packages.forEach(p => {
+        if (p.duration_minutes === undefined) {
+          p.duration_minutes = p.id === 'pkg-platinum' ? 120 : p.id === 'pkg-premium' ? 100 : 30;
+          updated = true;
+        }
+        if (p.total_questions === undefined) {
+          p.total_questions = p.id === 'pkg-platinum' ? 110 : p.id === 'pkg-premium' ? 110 : 30;
+          updated = true;
+        }
+      });
     }
     if (!fileData.faqs) {
       fileData.faqs = [...DEFAULT_FAQS];
@@ -449,6 +472,20 @@ export const getClientStore = (): MockDbStore => {
       fileData.users.forEach(u => {
         if (!u.package_id) {
           u.package_id = u.role === 'admin' ? 'pkg-platinum' : 'pkg-basic';
+          updated = true;
+        }
+        if (!u.unlocked_packages) {
+          u.unlocked_packages = u.role === 'admin'
+            ? ['pkg-basic', 'pkg-premium', 'pkg-platinum']
+            : [u.package_id || 'pkg-basic'];
+          updated = true;
+        }
+      });
+    }
+    if (fileData.questions) {
+      fileData.questions.forEach(q => {
+        if (!q.package_ids) {
+          q.package_ids = ['pkg-basic'];
           updated = true;
         }
       });
@@ -477,6 +514,11 @@ export const getClientStore = (): MockDbStore => {
       packages: [...DEFAULT_PACKAGES],
       faqs: [...DEFAULT_FAQS]
     };
+    global._mockDb.questions.forEach(q => {
+      if (!q.package_ids) {
+        q.package_ids = ['pkg-basic'];
+      }
+    });
     writeToFile(global._mockDb);
   }
   return global._mockDb;
@@ -679,9 +721,17 @@ export const db = {
     return store.users.find(u => u.id === id) || null;
   },
 
-  createUser: async (email: string, role: 'admin' | 'user' = 'user', id?: string, password?: string, package_id: string = 'pkg-basic'): Promise<UserProfile> => {
+  createUser: async (
+    email: string,
+    role: 'admin' | 'user' = 'user',
+    id?: string,
+    password?: string,
+    package_id: string = 'pkg-basic',
+    unlocked_packages?: string[]
+  ): Promise<UserProfile> => {
+    const defaultUnlocked = unlocked_packages || (role === 'admin' ? ['pkg-basic', 'pkg-premium', 'pkg-platinum'] : [package_id]);
     if (isClient) {
-      return await clientFetch('createUser', 'POST', { email, role, id, password, package_id });
+      return await clientFetch('createUser', 'POST', { email, role, id, password, package_id, unlocked_packages: defaultUnlocked });
     }
 
     const newId = id || `user-${Math.random().toString(36).substr(2, 9)}`;
@@ -689,8 +739,9 @@ export const db = {
       id: newId,
       email,
       role,
-      can_generate_exam: email === 'admin@kelasmateri.com' || package_id === 'pkg-platinum',
+      can_generate_exam: email === 'admin@kelasmateri.com' || package_id === 'pkg-platinum' || defaultUnlocked.includes('pkg-platinum'),
       package_id,
+      unlocked_packages: defaultUnlocked,
       created_at: new Date().toISOString(),
       password: password || 'palamana'
     };
@@ -713,7 +764,17 @@ export const db = {
       return await clientFetch('updateUser', 'POST', { id, updates });
     }
 
-    if (updates.package_id) {
+    if (updates.unlocked_packages) {
+      updates.can_generate_exam = updates.unlocked_packages.includes('pkg-platinum');
+      // For legacy support, set package_id to the highest priority package
+      if (updates.unlocked_packages.includes('pkg-platinum')) {
+        updates.package_id = 'pkg-platinum';
+      } else if (updates.unlocked_packages.includes('pkg-premium')) {
+        updates.package_id = 'pkg-premium';
+      } else {
+        updates.package_id = updates.unlocked_packages[0] || 'pkg-basic';
+      }
+    } else if (updates.package_id) {
       updates.can_generate_exam = updates.package_id === 'pkg-platinum';
     }
 
@@ -771,7 +832,8 @@ export const db = {
     const newQuestion: Question = {
       ...question,
       id: `q-${Math.random().toString(36).substr(2, 9)}`,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      package_ids: question.package_ids || ['pkg-basic']
     };
 
     if (isSupabaseConfigured && supabase) {

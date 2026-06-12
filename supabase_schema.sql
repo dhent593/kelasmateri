@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     password TEXT NOT NULL,
     role user_role NOT NULL DEFAULT 'user',
     can_generate_exam BOOLEAN NOT NULL DEFAULT false,
-    package_id TEXT DEFAULT 'pkg-basic',
+    unlocked_packages JSONB DEFAULT '["pkg-basic"]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.manual_questions (
     options JSONB NOT NULL, -- Array of strings e.g. ["A. Option 1", "B. Option 2", ...]
     correct_answer TEXT NOT NULL, -- For TIU/TWK: 'A', 'B', etc. For TKP: JSON string/object matching options to scores e.g. {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1}
     explanation TEXT, -- Pembahasan
+    package_ids JSONB DEFAULT '["pkg-basic"]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -74,6 +75,8 @@ CREATE TABLE IF NOT EXISTS public.packages (
     price INT NOT NULL,
     description TEXT,
     features JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of strings e.g. ["Fitur 1", "Fitur 2"]
+    duration_minutes INT NOT NULL DEFAULT 30,
+    total_questions INT NOT NULL DEFAULT 30,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -89,10 +92,10 @@ CREATE INDEX IF NOT EXISTS manual_questions_category_idx ON public.manual_questi
 --------------------------------------------------------------------------------
 
 -- Seed default users
-INSERT INTO public.users (id, email, password, role, can_generate_exam)
+INSERT INTO public.users (id, email, password, role, can_generate_exam, unlocked_packages)
 VALUES 
-('admin-uuid', 'admin@kelasmateri.com', 'palamana', 'admin', true),
-('user-uuid', 'user@kelasmateri.com', 'palamana', 'user', false)
+('admin-uuid', 'admin@kelasmateri.com', 'palamana', 'admin', true, '["pkg-basic", "pkg-premium", "pkg-platinum"]'::jsonb),
+('user-uuid', 'user@kelasmateri.com', 'palamana', 'user', false, '["pkg-basic"]'::jsonb)
 ON CONFLICT (email) DO NOTHING;
 
 -- Seed default questions
@@ -134,14 +137,12 @@ VALUES
  '["A. Ikut berteriak membalas tuduhannya agar warga lain tahu bahwa Anda sudah bekerja keras.", "B. Tetap bersikap tenang, mendengarkan keluhannya dengan empati, meminta maaf atas ketidaknyamanan, dan menjelaskan situasi pelayanan dengan ramah serta menyelesaikannya secepat mungkin.", "C. Meninggalkan loket and memanggil satpam untuk mengusir warga tersebut keluar dari gedung.", "D. Diam saja dan cemberut selama melayani warga tersebut untuk menunjukkan bahwa Anda tersinggung.", "E. Menutup loket pelayanan sementara waktu sampai suasana menjadi kondusif kembali."]'::jsonb, 
  '{"A":1,"B":5,"C":3,"D":2,"E":4}',
  'Pembahasan (Aspek Pelayanan Publik): Opsi B bernilai 5 karena pelayan publik dituntut untuk memiliki kendali diri yang kuat, mendengarkan kritik secara ramah, empati, dan tidak terpancing emosi negatif.')
-ON CONFLICT (id) DO NOTHING;
-
 -- Seed default packages
-INSERT INTO public.packages (id, name, price, description, features)
+INSERT INTO public.packages (id, name, price, description, features, duration_minutes, total_questions)
 VALUES
-('pkg-basic', 'Paket Basic (Uji Coba)', 0, 'Sangat cocok untuk pemula yang ingin mencoba sistem CAT CPNS secara gratis.', '["Akses 30 Soal Acak (10 TWK, 10 TIU, 10 TKP)", "Durasi Ujian 30 Menit", "Pembahasan Soal Lengkap", "Statistik & Progres Belajar Dasar"]'::jsonb),
-('pkg-premium', 'Paket Premium CAT', 49000, 'Akses penuh ke semua simulasi tryout manual kurasi standar CAT BKN RI.', '["Akses Penuh 110 Soal CAT Lengkap", "Durasi Ujian 100 Menit", "Pembahasan Soal Detil & Komprehensif", "Grafik Analisis Progres Belajar", "Sistem Perbandingan Ambang Batas"]'::jsonb),
-('pkg-platinum', 'Paket Platinum AI', 99000, 'Solusi belajar cerdas menggunakan soal kustom tak terbatas dari Gemini AI.', '["Semua Fitur Paket Premium CAT", "Akses Simulasi Adaptif Gemini AI", "Penjanaan Soal Tak Terbatas secara Real-time", "Rekomendasi Area Kelemahan Materi", "Prioritas Layanan Dukungan Admin"]'::jsonb)
+('pkg-basic', 'Paket Basic (Uji Coba)', 0, 'Sangat cocok untuk pemula yang ingin mencoba sistem CAT CPNS secara gratis.', '["Akses 30 Soal Acak (10 TWK, 10 TIU, 10 TKP)", "Durasi Ujian 30 Menit", "Pembahasan Soal Lengkap", "Statistik & Progres Belajar Dasar"]'::jsonb, 30, 30),
+('pkg-premium', 'Paket Premium CAT', 49000, 'Akses penuh ke semua simulasi tryout manual kurasi standar CAT BKN RI.', '["Akses Penuh 110 Soal CAT Lengkap", "Durasi Ujian 100 Menit", "Pembahasan Soal Detil & Komprehensif", "Grafik Analisis Progres Belajar", "Sistem Perbandingan Ambang Batas"]'::jsonb, 100, 110),
+('pkg-platinum', 'Paket Platinum AI', 99000, 'Solusi belajar cerdas menggunakan soal kustom tak terbatas dari Gemini AI.', '["Semua Fitur Paket Premium CAT", "Akses Simulasi Adaptif Gemini AI", "Penjanaan Soal Tak Terbatas secara Real-time", "Rekomendasi Area Kelemahan Materi", "Prioritas Layanan Dukungan Admin"]'::jsonb, 120, 110)
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. Create FAQs Table
